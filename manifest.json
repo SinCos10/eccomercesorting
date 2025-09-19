@@ -2,7 +2,7 @@
   "name": "App de Separação",
   "short_name": "Separação",
   "description": "Aplicativo para gestão de separação de pedidos e produtos",
-  "start_url": "/",
+  "start_url": "/eccomercesorting/",
   "display": "standalone",
   "background_color": "#2563eb",
   "theme_color": "#2563eb",
@@ -19,4 +19,5 @@
       "type": "image/png"
     }
   ]
+
 }
