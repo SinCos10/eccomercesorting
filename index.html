@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App de Separação</title>
+    <meta name="description" content="Aplicativo para gestão de separação de pedidos e produtos">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192x192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f3f4f6;
+            --text-color: #1f2937;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            max-width: 100%;
+            overflow-x: hidden;
+            height: 100vh;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .container {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 70px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .menu-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+        
+        .menu-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px 16px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        
+        .menu-item:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .menu-item h2 {
+            margin-bottom: 8px;
+            color: var(--primary-color);
+        }
+        
+        .menu-item p {
+            color: var(--text-color);
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        .icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+        
+        .screen {
+            display: none;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            cursor: pointer;
+        }
+        
+        .sub-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .card h3 {
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+        
+        .button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-block;
+            text-align: center;
+            margin: 8px 0;
+            width: 100%;
+        }
+        
+        .button-success {
+            background-color: var(--success-color);
+        }
+        
+        .button-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .button-danger {
+            background-color: var(--danger-color);
+        }
+        
+        .button-small {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            width: auto;
+        }
+        
+        .input-group {
+            margin-bottom: 16px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .list-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-pendente {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-andamento {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-concluido {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .scanner-container {
+            width: 100%;
+            height: 250px;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .scanner-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-direction: column;
+        }
+        
+        .scanner-animation {
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-color);
+            position: relative;
+            animation: scan 2s infinite linear;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 250px; }
+            100% { top: 0; }
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .footer-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .footer-button.active {
+            color: var(--primary-color);
+        }
+        
+        .footer-button i {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin: 16px 0;
+        }
+        
+        .tab-button {
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+        }
+        
+        .tab-button.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .product-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .status-pending {
+            background-color: #d1d5db;
+        }
+        
+        .status-completed {
+            background-color: var(--success-color);
+        }
+        
+        .action-button {
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .action-button.scan {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .action-button.edit {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .action-button.delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--success-color);
+            border-radius: 4px;
+        }
+        
+        .history-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .history-date {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .history-details {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+            background-color: #f8fafc;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: #eff6ff;
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .file-details {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .action-btn {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .btn-view {
+            background-color: #dbeafe;
+            color: var(--primary-color);
+        }
+        
+        .btn-edit {
+            background-color: #fef3c7;
+            color: var(--warning-color);
+        }
+        
+        .btn-delete {
+            background-color: #fee2e2;
+            color: var(--danger-color);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #64748b;
+        }
+        
+        .empty-icon {
+            font-size: 2rem;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification-success {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .notification-error {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .notification-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+        
+        .filter-button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .filter-button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .install-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 99;
+            cursor: pointer;
+        }
+        
+        .report-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .report-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .report-detail {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .report-label {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 600px) {
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .file-actions {
+                margin-top: 8px;
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .action-btn {
+                flex: 1;
+                text-align: center;
+            }
+            
+            .filter-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela Principal/Menu -->
+    <div id="main-screen" class="screen active">
+        <header>
+            <h1>App de Separação</h1>
+        </header>
+        
+        <div class="container">
+            <div class="menu-container">
+                <div class="menu-item" onclick="showScreen('separacao-itens')">
+                    <div class="icon"><i class="fas fa-box"></i></div>
+                    <h2>Separação de Itens</h2>
+                    <p>Registro de separação individual de produtos</p>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('separacao-pedidos')">
+                    <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+                    <h2>Separação de Pedidos</h2>
+                    <p>Controle completo de pedidos</p>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('confecao-pedidos')">
+                    <div class="icon"><i class="fas fa-tasks"></i></div>
+                    <h2>Confecção de Pedidos</h2>
+                    <p>Preparação e finalização de pedidos</p>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('importacao-listas')">
+                    <div class="icon"><i class="fas fa-file-import"></i></div>
+                    <h2>Importação de Listas</h2>
+                    <p>Carregar listas de pedidos via PDF</p>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('adicionar-produto')">
+                    <div class="icon"><i class="fas fa-plus-circle"></i></div>
+                    <h2>Adicionar Produto</h2>
+                    <p>Cadastrar produtos manualmente ou por importação</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tela de Separação de Itens -->
+    <div id="separacao-itens" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Separação de Itens</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Scanner de Código de Barras</h3>
+                <div class="scanner-container">
+                    <div class="scanner-placeholder">
+                        <i class="fas fa-barcode" style="font-size: 48px; margin-bottom: 16px;"></i>
+                        <p>Posicione o código de barras na frente da câmera</p>
+                        <div class="scanner-animation"></div>
+                    </div>
+                </div>
+                <button class="button" onclick="simulateScan()">Simular Leitura</button>
+            </div>
+            
+            <div class="card">
+                <h3>Itens para Separar <span id="progress-text">(3/10)</span></h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 30%"></div>
+                </div>
+                
+                <div class="filter-buttons">
+                    <button class="filter-button active" onclick="filterProducts('all')">Todos</button>
+                    <button class="filter-button" onclick="filterProducts('pending')">Pendentes</button>
+                    <button class="filter-button" onclick="filterProducts('completed')">Concluídos</button>
+                    <button class="filter-button" onclick="sortProducts('name')">Ordenar por Nome</button>
+                    <button class="filter-button" onclick="sortProducts('code')">Ordenar por Código</button>
+                </div>
+                
+                <div id="products-list">
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="status-indicator status-pending"></div>
+                            <div>
+                                <strong>Produto A</strong>
+                                <p>Código: 123456</p>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="action-button scan" onclick="markAsScanned('Produto A', '123456')"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="status-indicator status-pending"></div>
+                            <div>
+                                <strong>Produto B</strong>
+                                <p>Código: 789012</p>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="action-button scan" onclick="markAsScanned('Produto B', '789012')"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="status-indicator status-completed"></div>
+                            <div>
+                                <strong>Produto C</strong>
+                                <p>Código: 345678</p>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="action-button scan" onclick="markAsScanned('Produto C', '345678')"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="status-indicator status-completed"></div>
+                            <div>
+                                <strong>Produto D</strong>
+                                <p>Código: 901234</p>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="action-button scan" onclick="markAsScanned('Produto D', '901234')"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="status-indicator status-completed"></div>
+                            <div>
+                                <strong>Produto E</strong>
+                                <p>Código: 567890</p>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="action-button scan" onclick="markAsScanned('Produto E', '567890')"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="button button-success" onclick="finishSeparation()">Finalizar Separação</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tela de Separação de Pedidos -->
+    <div id="separacao-pedidos" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Separação de Pedidos</h1>
+        </div>
+        
+        <div class="container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('pendentes-tab')">Pendentes</button>
+                <button class="tab-button" onclick="showTab('andamento-tab')">Em Andamento</button>
+                <button class="tab-button" onclick="showTab('concluidos-tab')">Concluídos</button>
+            </div>
+            
+            <div id="pendentes-tab" class="tab-content active">
+                <div class="card">
+                    <div class="list-item">
+                        <div>
+                            <strong>Pedido #001</strong>
+                            <p>5 itens • Cliente: João Silva</p>
+                        </div>
+                        <span class="status-badge status-pendente">Pendente</span>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div>
+                            <strong>Pedido #002</strong>
+                            <p>3 itens • Cliente: Maria Santos</p>
+                        </div>
+                        <span class="status-badge status-pendente">Pendente</span>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div>
+                            <strong>Pedido #003</strong>
+                            <p>8 itens • Cliente: Carlos Oliveira</p>
+                        </div>
+                        <span class="status-badge status-pendente">Pendente</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="andamento-tab" class="tab-content">
+                <div class="card">
+                    <div class="list-item">
+                        <div>
+                            <strong>Pedido #004</strong>
+                            <p>4 itens • Cliente: Ana Costa</p>
+                        </div>
+                        <span class="status-badge status-andamento">Em Andamento</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="concluidos-tab" class="tab-content">
+                <div class="card">
+                    <div class="list-item">
+                        <div>
+                            <strong>Pedido #005</strong>
+                            <p>6 itens • Cliente: Pedro Alves</p>
+                        </div>
+                        <span class="status-badge status-concluido">Concluído</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="button button-success" onclick="startNewOrder()">Iniciar Novo Pedido</button>
+        </div>
+    </div>
+    
+    <!-- Tela de Confecção de Pedidos -->
+    <div id="confecao-pedidos" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Confecção de Pedidos</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Pedido em Confecção: #006</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 60%"></div>
+                </div>
+                <p>3 de 5 itens conferidos</p>
+                
+                <div class="input-group">
+                    <label for="product-code">Código do Produto</label>
+                    <input type="text" id="product-code" placeholder="Digite ou escaneie o código">
+                </div>
+                
+                <button class="button" onclick="checkProduct()">Conferir Produto</button>
+            </div>
+            
+            <div class="card">
+                <h3>Itens do Pedido</h3>
+                
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator status-completed"></div>
+                        <div>
+                            <strong>Produto X</strong>
+                            <p>Código: 111222 • Qtd: 2</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-concluido">Conferido</span>
+                </div>
+                
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator status-completed"></div>
+                        <div>
+                            <strong>Produto Y</strong>
+                            <p>Código: 333444 • Qtd: 1</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-concluido">Conferido</span>
+                </div>
+                
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator status-completed"></div>
+                        <div>
+                            <strong>Produto Z</strong>
+                            <p>Código: 555666 • Qtd: 3</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-concluido">Conferido</span>
+                </div>
+                
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator status-pending"></div>
+                        <div>
+                            <strong>Produto W</strong>
+                            <p>Código: 777888 • Qtd: 2</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-pendente">Pendente</span>
+                </div>
+                
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator status-pending"></div>
+                        <div>
+                            <strong>Produto V</strong>
+                            <p>Código: 999000 • Qtd: 1</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-pendente">Pendente</span>
+                </div>
+            </div>
+            
+            <button class="button button-success" onclick="finishOrder()">Finalizar Pedido</button>
+        </div>
+    </div>
+    
+    <!-- Tela de Importação de Listas -->
+    <div id="importacao-listas" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Importação de Listas</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Importar Nova Lista</h3>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h3>Arraste seu arquivo PDF aqui</h3>
+                    <p>ou</p>
+                    <button class="button button-small" onclick="document.getElementById('list-file').click()">
+                        <i class="fas fa-upload"></i> Selecione um arquivo
+                    </button>
+                    <input type="file" id="list-file" class="file-input" accept=".pdf">
+                </div>
+                
+                <div class="input-group">
+                    <label for="list-name">Nome da Lista</label>
+                    <input type="text" id="list-name" placeholder="Digite um nome para a lista">
+                </div>
+                
+                <div class="input-group">
+                    <label for="list-type">Tipo de Lista</label>
+                    <select id="list-type">
+                        <option value="separacao">Separação de Itens</option>
+                        <option value="pedidos">Separação de Pedidos</option>
+                        <option value="confecao">Confecção de Pedidos</option>
+                    </select>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                
+                <button class="button button-success" onclick="processUpload()" id="process-btn">
+                    <i class="fas fa-cog"></i> Processar Lista
+                </button>
+            </div>
+            
+            <div class="card">
+                <h3>Listas Importadas</h3>
+                <div id="list-container">
+                    <!-- As listas importadas serão exibidas aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tela de Adicionar Produto -->
+    <div id="adicionar-produto" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Adicionar Produto</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Adicionar Produto Manualmente</h3>
+                
+                <div class="input-group">
+                    <label for="product-name">Nome do Produto</label>
+                    <input type="text" id="product-name" placeholder="Digite o nome do produto">
+                </div>
+                
+                <div class="input-group">
+                    <label for="barcode">Código de Barras</label>
+                    <input type="text" id="barcode" placeholder="Digite o código de barras">
+                </div>
+                
+                <button class="button button-success" onclick="addProduct()">
+                    <i class="fas fa-plus"></i> Adicionar Produto
+                </button>
+            </div>
+            
+            <div class="card">
+                <h3>Importar Produtos em Lote</h3>
+                
+                <div class="upload-area" id="importProductsArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <h3>Arraste seu arquivo TXT ou CSV aqui</h3>
+                    <p>Formato: Nome, Código (um por linha)</p>
+                    <button class="button button-small" onclick="document.getElementById('products-file').click()">
+                        <i class="fas fa-upload"></i> Selecione um arquivo
+                    </button>
+                    <input type="file" id="products-file" class="file-input" accept=".txt,.csv">
+                </div>
+                
+                <div class="input-group">
+                    <label for="products-content">Ou cole o conteúdo aqui:</label>
+                    <textarea id="products-content" rows="5" placeholder="Nome do Produto, 123456&#10;Outro Produto, 789012"></textarea>
+                </div>
+                
+                <button class="button" onclick="importProducts()">
+                    <i class="fas fa-file-import"></i> Importar Produtos
+                </button>
+            </div>
+            
+            <div class="card">
+                <h3>Produtos Cadastrados</h3>
+                <div id="products-container">
+                    <!-- Os produtos cadastrados serão exibidos aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Relatório -->
+    <div class="report-modal" id="reportModal">
+        <div class="report-content">
+            <div class="report-header">
+                <h2>Relatório de Separação</h2>
+                <button class="close-button" onclick="closeReport()">&times;</button>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Responsável:</span>
+                <span id="report-responsavel">Operador</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Data:</span>
+                <span id="report-data">01/01/2023</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Hora de Início:</span>
+                <span id="report-inicio">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Hora de Término:</span>
+                <span id="report-termino">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Tempo Total:</span>
+                <span id="report-tempo">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Itens Processados:</span>
+                <span id="report-itens">0/0</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Eficiência:</span>
+                <span id="report-eficiencia">0%</span>
+            </div>
+            
+            <button class="button button-success" onclick="closeReport()">OK</button>
+        </div>
+    </div>
+
+    <!-- Footer Navigation -->
+    <div class="footer">
+        <button class="footer-button active" onclick="showScreen('main-screen')">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </button>
+        <button class="footer-button" onclick="showScreen('separacao-itens')">
+            <i class="fas fa-box"></i>
+            <span>Itens</span>
+        </button>
+        <button class="footer-button" onclick="showScreen('separacao-pedidos')">
+            <i class="fas fa-clipboard-list"></i>
+            <span>Pedidos</span>
+        </button>
+        <button class="footer-button" onclick="showScreen('confecao-pedidos')">
+            <i class="fas fa-tasks"></i>
+            <span>Confecção</span>
+        </button>
+        <button class="footer-button" onclick="showScreen('importacao-listas')">
+            <i class="fas fa-file-import"></i>
+            <span>Importar</span>
+        </button>
+    </div>
+
+    <button id="installButton" class="install-button" style="display: none;">
+        <i class="fas fa-download"></i>
+    </button>
+
+    <div class="notification" id="notification">
+        <i class="notification-icon" id="notification-icon"></i>
+        <span id="notification-text"></span>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let selectedFile = null;
+        let products = [
+            { name: "Produto A", code: "123456", completed: false },
+            { name: "Produto B", code: "789012", completed: false },
+            { name: "Produto C", code: "345678", completed: true },
+            { name: "Produto D", code: "901234", completed: true },
+            { name: "Produto E", code: "567890", completed: true }
+        ];
+        
+        let registeredProducts = [
+            { name: "Produto A", code: "123456" },
+            { name: "Produto B", code: "789012" },
+            { name: "Produto C", code: "345678" },
+            { name: "Produto D", code: "901234" },
+            { name: "Produto E", code: "567890" },
+            { name: "Produto X", code: "111222" },
+            { name: "Produto Y", code: "333444" },
+            { name: "Produto Z", code: "555666" },
+            { name: "Produto W", code: "777888" },
+            { name: "Produto V", code: "999000" }
+        ];
+        
+        // Variáveis para controle de tempo
+        let startTime = null;
+        let endTime = null;
+        let currentProcess = null;
+        
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+            });
+        }
+        
+        // Before Install Prompt
+        let deferredPrompt;
+        const installButton = document.getElementById('installButton');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installButton.style.display = 'flex';
+            
+            installButton.addEventListener('click', () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            });
+        });
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initDragAndDrop();
+            loadSavedLists();
+            updateProcessButton();
+            loadRegisteredProducts();
+            
+            document.getElementById('list-name').addEventListener('input', updateProcessButton);
+            document.getElementById('list-file').addEventListener('change', handleFileSelect);
+            document.getElementById('products-file').addEventListener('change', handleProductsFileSelect);
+            
+            // Carregar nome do operador se existir
+            const operatorName = localStorage.getItem('operatorName');
+            if (operatorName) {
+                document.getElementById('operator-name').value = operatorName;
+            }
+        });
+        
+        // Funções principais de navegação
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            document.getElementById(screenId).classList.add('active');
+            
+            document.querySelectorAll('.footer-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            if (screenId === 'main-screen') {
+                document.querySelector('.footer-button:nth-child(1)').classList.add('active');
+            } else if (screenId === 'separacao-itens') {
+                document.querySelector('.footer-button:nth-child(2)').classList.add('active');
+                renderProductsList();
+                if (!startTime) {
+                    startTime = new Date();
+                    currentProcess = 'separacao';
+                    showNotification("Separação iniciada. Tempo começou a ser contado.", "success");
+                }
+            } else if (screenId === 'separacao-pedidos') {
+                document.querySelector('.footer-button:nth-child(3)').classList.add('active');
+            } else if (screenId === 'confecao-pedidos') {
+                document.querySelector('.footer-button:nth-child(4)').classList.add('active');
+                if (!startTime) {
+                    startTime = new Date();
+                    currentProcess = 'confecao';
+                    showNotification("Confecção iniciada. Tempo começou a ser contado.", "success");
+                }
+            } else if (screenId === 'importacao-listas') {
+                document.querySelector('.footer-button:nth-child(5)').classList.add('active');
+            } else if (screenId === 'adicionar-produto') {
+                // Não há botão no footer para esta tela
+            }
+        }
+        
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Funções de simulação
+        function simulateScan() {
+            const randomProduct = registeredProducts[Math.floor(Math.random() * registeredProducts.length)];
+            alert(`Código de barras lido: ${randomProduct.code}\nProduto: ${randomProduct.name}\nMarcação realizada com sucesso!`);
+            markProductAsScanned(randomProduct.code);
+        }
+        
+        function markProductAsScanned(code) {
+            const productIndex = products.findIndex(p => p.code === code);
+            if (productIndex !== -1) {
+                products[productIndex].completed = true;
+                renderProductsList();
+                showNotification(`Produto "${products[productIndex].name}" marcado como separado!`, 'success');
+            } else {
+                const registeredProduct = registeredProducts.find(p => p.code === code);
+                if (registeredProduct) {
+                    products.push({
+                        name: registeredProduct.name,
+                        code: registeredProduct.code,
+                        completed: true
+                    });
+                    renderProductsList();
+                    showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
+                } else {
+                    showNotification(`Código ${code} não encontrado na base de produtos.`, 'error');
+                }
+            }
+        }
+        
+        function markAsScanned(productName, productCode) {
+            const productIndex = products.findIndex(p => p.code === productCode);
+            if (productIndex !== -1) {
+                products[productIndex].completed = !products[productIndex].completed;
+                renderProductsList();
+                
+                const status = products[productIndex].completed ? "marcado como separado" : "marcado como pendente";
+                showNotification(`Produto "${productName}" ${status}!`, 'success');
+            }
+        }
+        
+        function startNewOrder() {
+            alert('Iniciando novo pedido...');
+            showScreen('confecao-pedidos');
+        }
+        
+        function checkProduct() {
+            const code = document.getElementById('product-code').value;
+            if (code) {
+                const product = registeredProducts.find(p => p.code === code);
+                if (product) {
+                    alert(`Produto "${product.name}" conferido com sucesso!`);
+                    document.getElementById('product-code').value = '';
+                } else {
+                    alert('Código de produto não encontrado. Verifique o código ou cadastre o produto.');
+                }
+            } else {
+                alert('Por favor, digite ou escaneie um código de produto.');
+            }
+        }
+        
+        function finishOrder() {
+            endTime = new Date();
+            showReport();
+        }
+        
+        function finishSeparation() {
+            endTime = new Date();
+            showReport();
+        }
+        
+        function showReport() {
+            const timeDiff = endTime - startTime;
+            const seconds = Math.floor(timeDiff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            const completedItems = products.filter(p => p.completed).length;
+            const totalItems = products.length;
+            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+            
+            const operatorName = localStorage.getItem('operatorName') || 'Operador';
+            
+            document.getElementById('report-responsavel').textContent = operatorName;
+            document.getElementById('report-data').textContent = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('report-inicio').textContent = startTime.toLocaleTimeString('pt-BR');
+            document.getElementById('report-termino').textContent = endTime.toLocaleTimeString('pt-BR');
+            document.getElementById('report-tempo').textContent = `${minutes}min ${remainingSeconds}s`;
+            document.getElementById('report-itens').textContent = `${completedItems}/${totalItems}`;
+            document.getElementById('report-eficiencia').textContent = `${efficiency}%`;
+            
+            document.getElementById('reportModal').style.display = 'flex';
+        }
+        
+        function closeReport() {
+            document.getElementById('reportModal').style.display = 'none';
+            startTime = null;
+            endTime = null;
+            currentProcess = null;
+            
+            // Resetar produtos para o estado inicial
+            products.forEach(p => p.completed = false);
+            renderProductsList();
+        }
+        
+        // Configurar área de drag and drop
+        function initDragAndDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            const importProductsArea = document.getElementById('importProductsArea');
+            
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            importProductsArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                importProductsArea.classList.add('dragover');
+            });
+            
+            importProductsArea.addEventListener('dragleave', function() {
+                importProductsArea.classList.remove('dragover');
+            });
+            
+            importProductsArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                importProductsArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleProductsFiles(e.dataTransfer.files);
+                }
+            });
+        }
+        
+        // Manipular seleção de arquivo via input
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length) {
+                handleFiles(files);
+            }
+        }
+        
+        function handleProductsFileSelect(event) {
+            const files = event.target.files;
+            if (files.length) {
+                handleProductsFiles(files);
+            }
+        }
+        
+        // Processar arquivos selecionados
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            
+            if (file.type !== 'application/pdf') {
+                showNotification('Por favor, selecione um arquivo PDF.', 'error');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            document.getElementById('list-name').value = file.name.replace('.pdf', '');
+            updateProcessButton();
+            
+            showNotification(`Arquivo "${file.name}" selecionado com sucesso.`, 'success');
+        }
+        
+        function handleProductsFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            
+            if (file.type !== 'text/plain' && !file.name.endsWith('.csv')) {
+                showNotification('Por favor, selecione um arquivo TXT ou CSV.', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('products-content').value = e.target.result;
+                showNotification(`Arquivo "${file.name}" carregado com sucesso.`, 'success');
+            };
+            reader.readAsText(file);
+        }
+        
+        // Atualizar estado do botão de processamento
+        function updateProcessButton() {
+            const listName = document.getElementById('list-name').value;
+            const processBtn = document.getElementById('process-btn');
+            
+            processBtn.disabled = !(listName && selectedFile);
+        }
+        
+        // Processar upload
+        function processUpload() {
+            const listName = document.getElementById('list-name').value;
+            const listType = document.getElementById('list-type').value;
+            
+            if (!listName) {
+                showNotification('Por favor, informe um nome para a lista.', 'error');
+                return;
+            }
+            
+            if (!selectedFile) {
+                showNotification('Por favor, selecione um arquivo PDF.', 'error');
+                return;
+            }
+            
+            simulateProcessing(listName, listType);
+        }
+        
+        // Simular processamento
+        function simulateProcessing(listName, listType) {
+            const processBtn = document.getElementById('process-btn');
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+            
+            const progressFill = document.getElementById('progress-fill');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += 5;
+                progressFill.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    
+                    saveList(listName, listType, selectedFile.name);
+                    
+                    clearForm();
+                    
+                    updateProcessButton();
+                    processBtn.innerHTML = '<i class="fas fa-cog"></i> Processar Lista';
+                    
+                    showNotification('Lista processada com sucesso!', 'success');
+                }
+            }, 100);
+        }
+        
+        // Salvar lista no armazenamento local
+        function saveList(name, type, filename) {
+            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
+            
+            const newList = {
+                id: Date.now(),
+                name: name,
+                type: type,
+                filename: filename,
+                date: new Date().toISOString(),
+                items: generateSampleItems()
+            };
+            
+            savedLists.push(newList);
+            
+            localStorage.setItem('importedLists', JSON.stringify(savedLists));
+            
+            loadSavedLists();
+        }
+        
+        // Gerar itens de exemplo
+        function generateSampleItems() {
+            const items = [];
+            const itemCount = Math.floor(Math.random() * 10) + 5;
+            
+            for (let i = 1; i <= itemCount; i++) {
+                items.push({
+                    id: i,
+                    name: `Produto ${i}`,
+                    code: `COD${1000 + i}`,
+                    quantity: Math.floor(Math.random() * 5) + 1
+                });
+            }
+            
+            return items;
+        }
+        
+        // Carregar listas salvas
+        function loadSavedLists() {
+            const listContainer = document.getElementById('list-container');
+            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
+            
+            if (savedLists.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="far fa-folder-open"></i>
+                        </div>
+                        <h3>Nenhuma lista importada</h3>
+                        <p>Faça upload de uma lista PDF para começar</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            listContainer.innerHTML = savedLists.map(list => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-name">${list.name}</div>
+                        <div class="file-details">
+                            ${formatDate(list.date)} • 
+                            ${list.items.length} itens • 
+                            ${getListTypeName(list.type)}
+                        </div>
+                        <span class="status-badge status-success">Processado</span>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn btn-view" onclick="viewList(${list.id})">
+                            <i class="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button class="action-btn btn-edit" onclick="editList(${list.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteList(${list.id})">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Visualizar lista
+        function viewList(listId) {
+            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
+            const list = savedLists.find(l => l.id === listId);
+            
+            if (list) {
+                alert(`Visualizando lista: ${list.name}\nItens: ${list.items.length}\nData: ${formatDate(list.date)}`);
+            }
+        }
+        
+        // Editar lista
+        function editList(listId) {
+            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
+            const list = savedLists.find(l => l.id === listId);
+            
+            if (list) {
+                document.getElementById('list-name').value = list.name;
+                document.getElementById('list-type').value = list.type;
+                document.getElementById('process-btn').disabled = false;
+                
+                showNotification(`Editando lista "${list.name}". Faça as alterações necessárias e processe novamente.`, 'success');
+                
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        // Excluir lista
+        function deleteList(listId) {
+            if (confirm('Tem certeza que deseja excluir esta lista?')) {
+                const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
+                const updatedLists = savedLists.filter(list => list.id !== listId);
+                
+                localStorage.setItem('importedLists', JSON.stringify(updatedLists));
+                
+                loadSavedLists();
+                
+                showNotification('Lista excluída com sucesso.', 'success');
+            }
+        }
+        
+        // Limpar formulário
+        function clearForm() {
+            document.getElementById('list-name').value = '';
+            document.getElementById('list-type').value = 'separacao';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('list-file').value = '';
+            document.getElementById('process-btn').disabled = true;
+            selectedFile = null;
+        }
+        
+        // Mostrar notificação
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notification-icon');
+            const text = document.getElementById('notification-text');
+            
+            notification.className = 'notification';
+            if (type === 'success') {
+                notification.classList.add('notification-success');
+                icon.className = 'notification-icon fas fa-check-circle';
+            } else {
+                notification.classList.add('notification-error');
+                icon.className = 'notification-icon fas fa-exclamation-circle';
+            }
+            
+            text.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Helper: Formatar data
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        // Helper: Obter nome do tipo de lista
+        function getListTypeName(type) {
+            const types = {
+                'separacao': 'Separação de Itens',
+                'pedidos': 'Separação de Pedidos',
+                'confecao': 'Confecção de Pedidos'
+            };
+            
+            return types[type] || 'Desconhecido';
+        }
+        
+        // Funções para a tela de adicionar produto
+        function addProduct() {
+            const name = document.getElementById('product-name').value.trim();
+            const code = document.getElementById('barcode').value.trim();
+            
+            if (!name || !code) {
+                showNotification('Por favor, preencha todos os campos.', 'error');
+                return;
+            }
+            
+            if (registeredProducts.some(p => p.code === code)) {
+                showNotification('Já existe um produto com este código.', 'error');
+                return;
+            }
+            
+            registeredProducts.push({ name, code });
+            saveRegisteredProducts();
+            
+            document.getElementById('product-name').value = '';
+            document.getElementById('barcode').value = '';
+            
+            showNotification(`Produto "${name}" adicionado com sucesso!`, 'success');
+            loadRegisteredProducts();
+        }
+        
+        function importProducts() {
+            const content = document.getElementById('products-content').value.trim();
+            
+            if (!content) {
+                showNotification('Por favor, insira o conteúdo ou faça upload de um arquivo.', 'error');
+                return;
+            }
+            
+            const lines = content.split('\n');
+            let importedCount = 0;
+            let skippedCount = 0;
+            
+            for (const line of lines) {
+                const [name, code] = line.split(',').map(item => item.trim());
+                
+                if (name && code) {
+                    if (!registeredProducts.some(p => p.code === code)) {
+                        registeredProducts.push({ name, code });
+                        importedCount++;
+                    } else {
+                        skippedCount++;
+                    }
+                }
+            }
+            
+            if (importedCount > 0) {
+                saveRegisteredProducts();
+                showNotification(`${importedCount} produtos importados com sucesso! ${skippedCount > 0 ? `${skippedCount} produtos duplicados foram ignorados.` : ''}`, 'success');
+            } else if (skippedCount > 0) {
+                showNotification(`Todos os ${skippedCount} produtos já existiam na base e foram ignorados.`, 'warning');
+            } else {
+                showNotification('Nenhum produto válido encontrado para importação.', 'error');
+            }
+            
+            loadRegisteredProducts();
+        }
+        
+        function saveRegisteredProducts() {
+            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
+        }
+        
+        function loadRegisteredProducts() {
+            const savedProducts = localStorage.getItem('registeredProducts');
+            if (savedProducts) {
+                registeredProducts = JSON.parse(savedProducts);
+            }
+            
+            const productsContainer = document.getElementById('products-container');
+            
+            if (registeredProducts.length === 0) {
+                productsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <h3>Nenhum produto cadastrado</h3>
+                        <p>Adicione produtos manualmente ou importe uma lista</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            productsContainer.innerHTML = registeredProducts.map(product => `
+                <div class="list-item">
+                    <div class="file-info">
+                        <div class="file-name">${product.name}</div>
+                        <div class="file-details">Código: ${product.code}</div>
+                    </div>
+                    <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
+                        <i class="fas fa-trash"></i> Excluir
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        function deleteProduct(code) {
+            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                registeredProducts = registeredProducts.filter(p => p.code !== code);
+                saveRegisteredProducts();
+                loadRegisteredProducts();
+                showNotification('Produto excluído com sucesso.', 'success');
+            }
+        }
+        
+        // Funções para a tela de separação de itens
+        function renderProductsList() {
+            const productsList = document.getElementById('products-list');
+            const pendingCount = products.filter(p => !p.completed).length;
+            const totalCount = products.length;
+            
+            document.getElementById('progress-text').textContent = `(${totalCount - pendingCount}/${totalCount})`;
+            document.querySelector('.progress-fill').style.width = `${((totalCount - pendingCount) / totalCount) * 100}%`;
+            
+            productsList.innerHTML = products.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <p>Código: ${product.code}</p>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
+                            <i class="fas fa-barcode"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterProducts(filter) {
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            let filteredProducts = [];
+            
+            if (filter === 'all') {
+                filteredProducts = products;
+            } else if (filter === 'pending') {
+                filteredProducts = products.filter(p => !p.completed);
+            } else if (filter === 'completed') {
+                filteredProducts = products.filter(p => p.completed);
+            }
+            
+            const productsList = document.getElementById('products-list');
+            productsList.innerHTML = filteredProducts.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <p>Código: ${product.code}</p>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
+                            <i class="fas fa-barcode"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function sortProducts(criteria) {
+            document.querySelectorAll('.filter-button').forEach(button => {
+                if (button.textContent.includes('Ordenar')) {
+                    button.classList.remove('active');
+                }
+            });
+            event.target.classList.add('active');
+            
+            let sortedProducts = [...products];
+            
+            if (criteria === 'name') {
+                sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (criteria === 'code') {
+                sortedProducts.sort((a, b) => a.code.localeCompare(b.code));
+            }
+            
+            const productsList = document.getElementById('products-list');
+            productsList.innerHTML = sortedProducts.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <p>Código: ${product.code}</p>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
+                            <i class="fas fa-barcode"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Configurar operador
+        function setOperator() {
+            const operatorName = document.getElementById('operator-name').value.trim();
+            if (operatorName) {
+                localStorage.setItem('operatorName', operatorName);
+                showNotification(`Operador definido: ${operatorName}`, 'success');
+            } else {
+                showNotification('Por favor, informe o nome do operador.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
