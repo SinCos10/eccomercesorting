@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Incluir a biblioteca QuaggaJS para leitura de código de barras -->
     <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <!-- Incluir a biblioteca pdf.js para extração de texto de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root {
             --primary-color: #2563eb;
@@ -478,11 +480,15 @@
         
         .file-info {
             flex: 1;
+            overflow: hidden;
         }
         
         .file-name {
             font-weight: 600;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .file-details {
@@ -638,6 +644,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            position: relative;
         }
         
         .close-button {
@@ -645,6 +652,9 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
+            position: absolute;
+            right: 0;
+            top: 0;
         }
         
         .report-detail {
@@ -793,6 +803,71 @@
             border-radius: 3px;
         }
         
+        .list-selector {
+            margin-bottom: 16px;
+        }
+        
+        .product-match {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .match-found {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .match-notfound {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .product-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 16px 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        
+        .product-preview-item {
+            padding: 8px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .product-preview-item:last-child {
+            border-bottom: none;
+        }
+        
+        .manual-quantity-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .quantity-btn.remove {
+            background-color: var(--danger-color);
+        }
+        
         @media (max-width: 600px) {
             .file-item {
                 flex-direction: column;
@@ -865,7 +940,7 @@
                 <div class="menu-item" onclick="showScreen('confecao-pedidos')">
                     <div class="icon"><i class="fas fa-tasks"></i></div>
                     <h2>Confecção de Pedidos</h2>
-                    <p>Preparação e finalização de pedidos</p>
+                    <p>Preparação de pedidos</p>
                 </div>
                 
                 <div class="menu-item" onclick="showScreen('importacao-listas')">
@@ -877,13 +952,13 @@
                 <div class="menu-item" onclick="showScreen('adicionar-produto')">
                     <div class="icon"><i class="fas fa-plus-circle"></i></div>
                     <h2>Adicionar Produto</h2>
-                    <p>Cadastrar produtos manualmente ou por importação</p>
+                    <p>Cadastrar produtos manualmente</p>
                 </div>
                 
                 <div class="menu-item" onclick="showScreen('relatorios')">
                     <div class="icon"><i class="fas fa-chart-bar"></i></div>
                     <h2>Relatórios</h2>
-                    <p>Visualizar e exportar processos concluídos</p>
+                    <p>Visualizar processos concluídos</p>
                 </div>
             </div>
         </div>
@@ -897,6 +972,15 @@
         </div>
         
         <div class="container">
+            <div class="list-selector">
+                <div class="input-group">
+                    <label for="lista-selecionada">Lista de Separação</label>
+                    <select id="lista-selecionada" onchange="loadSelectedList()">
+                        <option value="">-- Selecione uma lista --</option>
+                    </select>
+                </div>
+            </div>
+            
             <div class="card">
                 <h3>Leitor de Código de Barras</h3>
                 
@@ -914,7 +998,7 @@
                     <div class="scanner-overlay"></div>
                     <div class="scanner-placeholder" id="scanner-placeholder">
                         <i class="fas fa-camera" style="font-size: 48px; margin-bottom: 16px;"></i>
-                        <p>Clique em "Ativar Câmera" para iniciar o leitor</p>
+                        <p>Clique em "Ativar Câmera" para iniciar leitor</p>
                     </div>
                 </div>
                 
@@ -965,162 +1049,6 @@
         </div>
     </div>
     
-    <!-- Tela de Separação de Pedidos -->
-    <div id="separacao-pedidos" class="screen">
-        <div class="sub-header">
-            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
-            <h1>Separação de Pedidos</h1>
-        </div>
-        
-        <div class="container">
-            <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('pendentes-tab')">Pendentes</button>
-                <button class="tab-button" onclick="showTab('andamento-tab')">Em Andamento</button>
-                <button class="tab-button" onclick="showTab('concluidos-tab')">Concluídos</button>
-            </div>
-            
-            <div id="pendentes-tab" class="tab-content active">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #001</strong>
-                            <p>5 itens • Cliente: João Silva</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
-                    
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #002</strong>
-                            <p>3 itens • Cliente: Maria Santos</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
-                    
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #003</strong>
-                            <p>8 itens • Cliente: Carlos Oliveira</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="andamento-tab" class="tab-content">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #004</strong>
-                            <p>4 itens • Cliente: Ana Costa</p>
-                        </div>
-                        <span class="status-badge status-andamento">Em Andamento</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="concluidos-tab" class="tab-content">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #005</strong>
-                            <p>6 itens • Cliente: Pedro Alves</p>
-                        </div>
-                        <span class="status-badge status-concluido">Concluído</span>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="button button-success" onclick="startNewOrder()">Iniciar Novo Pedido</button>
-        </div>
-    </div>
-    
-    <!-- Tela de Confecção de Pedidos -->
-    <div id="confecao-pedidos" class="screen">
-        <div class="sub-header">
-            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
-            <h1>Confecção de Pedidos</h1>
-        </div>
-        
-        <div class="container">
-            <div class="card">
-                <h3>Pedido em Confecção: #006</h3>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: 60%"></div>
-                </div>
-                <p>3 de 5 itens conferidos</p>
-                
-                <div class="input-group">
-                    <label for="product-code">Código do Produto</label>
-                    <input type="text" id="product-code" placeholder="Digite ou escaneie o código">
-                </div>
-                
-                <button class="button" onclick="checkProduct()">Conferir Produto</button>
-            </div>
-            
-            <div class="card">
-                <h3>Itens do Pedido</h3>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto X</strong>
-                            <p>Código: 111222 • Qtd: 2</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto Y</strong>
-                            <p>Código: 333444 • Qtd: 1</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto Z</strong>
-                            <p>Código: 555666 • Qtd: 3</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-pending"></div>
-                        <div>
-                            <strong>Produto W</strong>
-                            <p>Código: 777888 • Qtd: 2</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-pendente">Pendente</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-pending"></div>
-                        <div>
-                            <strong>Produto V</strong>
-                            <p>Código: 999000 • Qtd: 1</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-pendente">Pendente</span>
-                </div>
-            </div>
-            
-            <button class="button button-success" onclick="finishOrder()">Finalizar Pedido</button>
-        </div>
-    </div>
-    
     <!-- Tela de Importação de Listas -->
     <div id="importacao-listas" class="screen">
         <div class="sub-header">
@@ -1138,40 +1066,56 @@
                     </div>
                     <h3>Arraste seu arquivo PDF aqui</h3>
                     <p>ou</p>
-                    <button class="button button-small" onclick="document.getElementById('list-file').click()">
+                    <button class="button" onclick="document.getElementById('fileInput').click()">
                         <i class="fas fa-upload"></i> Selecione um arquivo
                     </button>
-                    <input type="file" id="list-file" class="file-input" accept=".pdf">
+                    <input type="file" id="fileInput" class="file-input" accept=".pdf" onchange="handleFileSelect(event)">
                 </div>
                 
-                <div class="input-group">
-                    <label for="list-name">Nome da Lista</label>
-                    <input type="text" id="list-name" placeholder="Digite um nome para a lista">
+                <div id="filePreview" style="display: none;">
+                    <h4>Arquivo selecionado:</h4>
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name" id="fileName">arquivo.pdf</div>
+                            <div class="file-details" id="fileDetails">Tamanho: 0 KB</div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="action-btn btn-view" onclick="analyzePDF()">
+                                <i class="fas fa-search"></i> Analisar
+                            </button>
+                            <button class="action-btn btn-delete" onclick="clearFile()">
+                                <i class="fas fa-trash"></i> Remover
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="input-group">
-                    <label for="list-type">Tipo de Lista</label>
-                    <select id="list-type">
-                        <option value="separacao">Separação de Itens</option>
-                        <option value="pedidos">Separação de Pedidos</option>
-                        <option value="confecao">Confecção de Pedidos</option>
-                    </select>
-                </div>
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" id="import-progress-fill" style="width: 0%"></div>
-                </div>
-                
-                <button class="button button-success" onclick="processUpload()" id="process-btn">
-                    <i class="fas fa-cog"></i> Processar Lista
-                </button>
             </div>
             
             <div class="card">
-                <h3>Listas Importadas</h3>
-                <div id="list-container">
-                    <!-- As listas importadas serão exibidas aqui -->
+                <h3>Análise de Produtos</h3>
+                <div id="analysisResults">
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h4>Nenhum arquivo analisado</h4>
+                        <p>Faça o upload de um PDF para analisar os produtos</p>
+                    </div>
                 </div>
+            </div>
+            
+            <div class="card" id="importedProductsCard" style="display: none;">
+                <h3>Produtos Importados</h3>
+                <div class="product-preview" id="productPreview">
+                    <!-- Prévia dos produtos importados -->
+                </div>
+                <div class="input-group">
+                    <label for="listName">Nome da Lista</label>
+                    <input type="text" id="listName" placeholder="Digite um nome para a lista">
+                </div>
+                <button class="button button-success" onclick="saveImportedList()">
+                    <i class="fas fa-save"></i> Salvar Lista
+                </button>
             </div>
         </div>
     </div>
@@ -1185,21 +1129,16 @@
         
         <div class="container">
             <div class="card">
-                <h3>Adicionar Produto Manualmente</h3>
+                <h3>Cadastrar Produto Manualmente</h3>
                 
                 <div class="input-group">
                     <label for="product-name">Nome do Produto</label>
-                    <input type="text" id="product-name" placeholder="Digite o nome do produto">
+                    <input type="text" id="product-name" placeholder="Ex: NIVEA Antissinais 50g">
                 </div>
                 
                 <div class="input-group">
-                    <label for="barcode">Código de Barras</label>
-                    <input type="text" id="barcode" placeholder="Digite o código de barras">
-                </div>
-                
-                <div class="input-group">
-                    <label for="quantity">Quantidade</label>
-                    <input type="number" id="quantity" placeholder="Quantidade" min="1" value="1">
+                    <label for="product-code">Código do Produto</label>
+                    <input type="text" id="product-code" placeholder="Ex: 7891000055123">
                 </div>
                 
                 <button class="button button-success" onclick="addProduct()">
@@ -1208,1297 +1147,704 @@
             </div>
             
             <div class="card">
-                <h3>Importar Produtos em Lote</h3>
-                
-                <div class="upload-area" id="importProductsArea">
-                    <div class="upload-icon">
-                        <i class="fas fa-file-csv"></i>
-                    </div>
-                    <h3>Arraste seu arquivo TXT ou CSV aqui</h3>
-                    <p>Formato: Nome, Código, Quantidade (um por linha)</p>
-                    <button class="button button-small" onclick="document.getElementById('products-file').click()">
-                        <i class="fas fa-upload"></i> Selecione um arquivo
-                    </button>
-                    <input type="file" id="products-file" class="file-input" accept=".txt,.csv">
-                </div>
+                <h3>Produtos Cadastrados</h3>
                 
                 <div class="input-group">
-                    <label for="products-content">Ou cole o conteúdo aqui:</label>
-                    <textarea id="products-content" rows="5" placeholder="Nome do Produto, 123456, 30&#10;Outro Produto, 789012, 15"></textarea>
+                    <input type="text" id="product-search" placeholder="Buscar produto..." oninput="searchProducts(this.value)">
                 </div>
                 
-                <button class="button" onclick="importProducts()">
-                    <i class="fas fa-file-import"></i> Importar Produtos
-                </button>
-            </div>
-            
-            <div class="card">
-                <h3>Produtos Cadastrados</h3>
-                <div id="products-container">
-                    <!-- Os produtos cadastrados serão exibidos aqui -->
+                <div id="products-list-registered">
+                    <!-- Produtos cadastrados serão listados aqui -->
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Tela de Relatórios -->
-    <div id="relatorios" class="screen">
-        <div class="sub-header">
-            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
-            <h1>Relatórios</h1>
-        </div>
-        
-        <div class="container">
-            <div class="card">
-                <h3>Processos Concluídos</h3>
-                <p>Visualize e exporte os relatórios de processos finalizados</p>
-                
-                <div id="reports-list">
-                    <!-- Relatórios serão carregados aqui -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Relatório -->
-    <div class="report-modal" id="reportModal">
-        <div class="report-content">
-            <div class="report-header">
-                <h2>Relatório de Separação</h2>
-                <button class="close-button" onclick="closeReport()">&times;</button>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Responsável:</span>
-                <span id="report-responsavel">Operador</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Data:</span>
-                <span id="report-data">01/01/2023</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Hora de Início:</span>
-                <span id="report-inicio">00:00:00</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Hora de Término:</span>
-                <span id="report-termino">00:00:00</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Tempo Total:</span>
-                <span id="report-tempo">00:00:00</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Itens Processados:</span>
-                <span id="report-itens">0/0</span>
-            </div>
-            
-            <div class="report-detail">
-                <span class="report-label">Eficiência:</span>
-                <span id="report-eficiencia">0%</span>
-            </div>
-            
-            <button class="button button-success" onclick="closeReport()">OK</button>
-            <button class="button" onclick="exportReport()">
-                <i class="fas fa-download"></i> Exportar como TXT
-            </button>
-        </div>
-    </div>
-
-    <!-- Footer Navigation -->
+    <!-- Rodapé de Navegação -->
     <div class="footer">
-        <button class="footer-button" onclick="showScreen('main-screen')">
+        <button class="footer-button active" onclick="showScreen('main-screen')">
             <i class="fas fa-home"></i>
             <span>Início</span>
         </button>
-        <button class="footer-button" id="footer-itens" onclick="showScreen('separacao-itens')">
-            <i class="fas fa-box"></i>
-            <span>Itens</span>
-        </button>
-        <button class="footer-button" id="footer-pedidos" onclick="showScreen('separacao-pedidos')">
+        
+        <button class="footer-button" onclick="showScreen('separacao-pedidos')">
             <i class="fas fa-clipboard-list"></i>
             <span>Pedidos</span>
         </button>
-        <button class="footer-button" id="footer-confecao" onclick="showScreen('confecao-pedidos')">
-            <i class="fas fa-tasks"></i>
-            <span>Confecção</span>
-        </button>
-        <button class="footer-button" id="footer-importar" onclick="showScreen('importacao-listas')">
+        
+        <button class="footer-button" onclick="showScreen('importacao-listas')">
             <i class="fas fa-file-import"></i>
             <span>Importar</span>
         </button>
+        
+        <button class="footer-button" onclick="showScreen('relatorios')">
+            <i class="fas fa-chart-bar"></i>
+            <span>Relatórios</span>
+        </button>
     </div>
-
-    <div class="notification" id="notification">
-        <i class="notification-icon" id="notification-icon"></i>
-        <span id="notification-text"></span>
+    
+    <!-- Notificações -->
+    <div class="notification notification-success" id="successNotification">
+        <i class="fas fa-check-circle notification-icon"></i>
+        <span id="successMessage">Operação realizada com sucesso!</span>
+    </div>
+    
+    <div class="notification notification-error" id="errorNotification">
+        <i class="fas fa-exclamation-circle notification-icon"></i>
+        <span id="errorMessage">Ocorreu um erro na operação.</span>
     </div>
 
     <script>
         // Variáveis globais
-        let operatorName = "";
-        let products = [];
-        let registeredProducts = [];
-        let startTime = null;
-        let endTime = null;
-        let currentProcess = null;
-        let activeProcess = null;
+        let currentOperator = '';
+        let lists = JSON.parse(localStorage.getItem('lists')) || {};
+        let currentList = null;
         let selectedFile = null;
-        let completedReports = [];
-        let lastScannedCode = null;
-        let lastScanTime = null;
-        let isScannerActive = false;
-        let canScan = true; // Controle para intervalo entre leituras
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            // Verificar se já tem operador definido
-            const savedOperator = localStorage.getItem('operatorName');
+        let scannerActive = false;
+        let importedProducts = [];
+        let registeredProducts = JSON.parse(localStorage.getItem('registeredProducts')) || [];
+        
+        // Inicialização quando a página carrega
+        window.onload = function() {
+            // Verificar se há um operador salvo
+            const savedOperator = localStorage.getItem('operator');
             if (savedOperator) {
-                operatorName = savedOperator;
-                showScreen('main-screen');
+                currentOperator = savedOperator;
+                document.getElementById('operatorModal').style.display = 'none';
             } else {
-                // Mostrar modal para inserir nome
                 document.getElementById('operatorModal').style.display = 'flex';
             }
             
-            // Carregar dados
-            loadSampleProducts();
-            renderProductsList();
+            // Carregar listas salvas
             loadSavedLists();
+            
+            // Carregar produtos cadastrados
             loadRegisteredProducts();
-            loadReports();
             
-            // Configurar foco no campo de código de barras
-            const barcodeInput = document.getElementById('barcode-input');
-            if (barcodeInput) {
-                barcodeInput.focus();
-            }
+            // Configurar eventos de arrastar e soltar para upload
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
             
-            // Adicionar event listeners para os inputs
-            const listNameInput = document.getElementById('list-name');
-            const listFileInput = document.getElementById('list-file');
-            const productsFileInput = document.getElementById('products-file');
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
             
-            if (listNameInput) listNameInput.addEventListener('input', updateProcessButton);
-            if (listFileInput) listFileInput.addEventListener('change', handleFileSelect);
-            if (productsFileInput) productsFileInput.addEventListener('change', handleProductsFileSelect);
-            
-            // Inicializar drag and drop
-            initDragAndDrop();
-        });
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleDroppedFile(e.dataTransfer.files[0]);
+                }
+            });
+        };
         
-        // Definir operador
+        // Função para definir o operador
         function setOperator() {
-            const nameInput = document.getElementById('operator-name');
-            const name = nameInput.value.trim();
-            
-            if (!name) {
-                showNotification('Por favor, informe seu nome.', 'error');
-                return;
-            }
-            
-            operatorName = name;
-            localStorage.setItem('operatorName', name);
-            document.getElementById('operatorModal').style.display = 'none';
-            showScreen('main-screen');
-            
-            showNotification(`Bem-vindo, ${name}!`, 'success');
-        }
-        
-        // Carregar produtos de exemplo
-        function loadSampleProducts() {
-            products = [
-                { name: "Produto A", code: "123456", quantity: 30, completed: 0, scanned: 0 },
-                { name: "Produto B", code: "789012", quantity: 15, completed: 0, scanned: 0 },
-                { name: "Produto C", code: "345678", quantity: 45, completed: 0, scanned: 0 },
-                { name: "Produto D", code: "901234", quantity: 20, completed: 0, scanned: 0 },
-                { name: "Produto E", code: "567890", quantity: 10, completed: 0, scanned: 0 }
-            ];
-            
-            // Carregar produtos registrados do localStorage ou usar padrão
-            const savedProducts = localStorage.getItem('registeredProducts');
-            if (savedProducts) {
-                registeredProducts = JSON.parse(savedProducts);
+            const operatorName = document.getElementById('operator-name').value.trim();
+            if (operatorName) {
+                currentOperator = operatorName;
+                localStorage.setItem('operator', operatorName);
+                document.getElementById('operatorModal').style.display = 'none';
+                showNotification('success', `Bem-vindo, ${operatorName}!`);
             } else {
-                registeredProducts = [
-                    { name: "Produto A", code: "123456", quantity: 30 },
-                    { name: "Produto B", code: "789012", quantity: 15 },
-                    { name: "Produto C", code: "345678", quantity: 45 },
-                    { name: "Produto D", code: "901234", quantity: 20 },
-                    { name: "Produto E", code: "567890", quantity: 10 },
-                    { name: "Produto X", code: "111222", quantity: 25 },
-                    { name: "Produto Y", code: "333444", quantity: 35 },
-                    { name: "Produto Z", code: "555666", quantity: 5 },
-                    { name: "Produto W", code: "777888", quantity: 50 },
-                    { name: "Produto V", code: "999000", quantity: 12 }
-                ];
-                saveRegisteredProducts();
+                showNotification('error', 'Por favor, informe seu nome.');
             }
         }
         
-        // Funções de navegação
-        function showScreen(screenId) {
-            // Se já tem um processo ativo e tenta navegar para outra tela
-            if (activeProcess && screenId !== activeProcess && screenId !== 'main-screen') {
-                showNotification('Finalize o processo atual antes de navegar para outras seções.', 'error');
-                return;
-            }
+        // Função para mostrar uma notificação
+        function showNotification(type, message) {
+            const notification = document.getElementById(`${type}Notification`);
+            const messageElement = document.getElementById(`${type}Message`);
             
+            messageElement.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Função para alternar entre telas
+        function showScreen(screenId) {
+            // Esconder todas as telas
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.remove('active');
             });
             
+            // Mostrar a tela solicitada
             document.getElementById(screenId).classList.add('active');
             
-            // Atualizar footer buttons
+            // Atualizar botões do rodapé
             document.querySelectorAll('.footer-button').forEach(button => {
                 button.classList.remove('active');
             });
             
             if (screenId === 'main-screen') {
-                document.querySelector('.footer-button:nth-child(1)').classList.add('active');
-                activeProcess = null;
-                enableNavigation();
-            } else if (screenId === 'separacao-itens') {
-                document.getElementById('footer-itens').classList.add('active');
-            } else if (screenId === 'separacao-pedidos') {
-                document.getElementById('footer-pedidos').classList.add('active');
-            } else if (screenId === 'confecao-pedidos') {
-                document.getElementById('footer-confecao').classList.add('active');
-            } else if (screenId === 'importacao-listas') {
-                document.getElementById('footer-importar').classList.add('active');
-            } else if (screenId === 'relatorios') {
-                loadReports();
+                document.querySelector('.footer-button:first-child').classList.add('active');
+            }
+            
+            // Ações específicas para cada tela
+            if (screenId === 'separacao-itens') {
+                updateProductsList();
+            } else if (screenId === 'adicionar-produto') {
+                loadRegisteredProducts();
             }
         }
         
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
+        // Função para lidar com a seleção de arquivo
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            handleDroppedFile(file);
         }
         
-        // Iniciar separação de itens
-        function startSeparation() {
-            showScreen('separacao-itens');
-            
-            // Focar no campo de código de barras
-            setTimeout(() => {
-                const barcodeInput = document.getElementById('barcode-input');
-                if (barcodeInput) {
-                    barcodeInput.focus();
-                }
-            }, 100);
-        }
-        
-        // Cancelar separação
-        function cancelSeparation() {
-            if (confirm('Deseja cancelar a separação? Todo o progresso será perdido.')) {
-                // Parar o scanner se estiver ativo
-                if (isScannerActive) {
-                    stopBarcodeScanner();
-                }
+        // Função para lidar com arquivo arrastado e solto
+        function handleDroppedFile(file) {
+            if (file && file.type === 'application/pdf') {
+                selectedFile = file;
                 
-                activeProcess = null;
-                enableNavigation();
-                resetSeparation();
-                showScreen('main-screen');
-            }
-        }
-        
-        // Desativar navegação
-        function disableNavigation() {
-            activeProcess = 'separacao-itens';
-            
-            document.querySelectorAll('.footer-button:not(#footer-itens)').forEach(button => {
-                button.disabled = true;
-            });
-            
-            document.querySelectorAll('.menu-item:not([onclick*="separacao-itens"])').forEach(item => {
-                item.style.opacity = '0.5';
-                item.style.cursor = 'not-allowed';
-                const originalOnClick = item.getAttribute('onclick');
-                item.setAttribute('data-original-onclick', originalOnClick);
-                item.removeAttribute('onclick');
-            });
-        }
-        
-        // Ativar navegação
-        function enableNavigation() {
-            document.querySelectorAll('.footer-button').forEach(button => {
-                button.disabled = false;
-            });
-            
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.style.opacity = '1';
-                item.style.cursor = 'pointer';
-                const originalOnClick = item.getAttribute('data-original-onclick');
-                if (originalOnClick) {
-                    item.setAttribute('onclick', originalOnClick);
-                }
-            });
-        }
-        
-        // Resetar separação
-        function resetSeparation() {
-            products.forEach(product => {
-                product.scanned = 0;
-                product.completed = 0;
-            });
-            startTime = null;
-            renderProductsList();
-        }
-        
-        // Inicializar o leitor de código de barras
-        function initBarcodeScanner() {
-            if (isScannerActive) return;
-            
-            const scannerPlaceholder = document.getElementById('scanner-placeholder');
-            if (scannerPlaceholder) {
-                scannerPlaceholder.style.display = 'none';
-            }
-            
-            // Verificar se o navegador suporta acesso à câmera
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showNotification('Seu navegador não suporta acesso à câmera.', 'error');
-                return;
-            }
-            
-            // Solicitar permissão para acessar a câmera
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(function(stream) {
-                isScannerActive = true;
-                const video = document.createElement('video');
-                video.id = 'barcode-scanner-video';
-                video.srcObject = stream;
-                video.setAttribute('playsinline', 'true');
-                video.play();
+                // Atualizar UI
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileDetails').textContent = `Tamanho: ${Math.round(file.size / 1024)} KB`;
+                document.getElementById('filePreview').style.display = 'block';
                 
-                const scannerContainer = document.querySelector('.scanner-container');
-                const existingVideo = document.getElementById('barcode-scanner-video');
-                if (existingVideo) {
-                    scannerContainer.removeChild(existingVideo);
-                }
-                scannerContainer.appendChild(video);
-                
-                // Atualizar controles
-                document.getElementById('start-scanner').classList.add('inactive');
-                document.getElementById('stop-scanner').classList.remove('inactive');
-                
-                // Iniciar a detecção de código de barras
-                startBarcodeDetection(video);
-            })
-            .catch(function(error) {
-                console.error('Erro ao acessar a câmera:', error);
-                showNotification('Não foi possível acessar a câmera. Verifique as permissões.', 'error');
-                
-                if (scannerPlaceholder) {
-                    scannerPlaceholder.style.display = 'flex';
-                }
-            });
-        }
-        
-        // Parar o leitor de código de barras
-        function stopBarcodeScanner() {
-            if (!isScannerActive) return;
-            
-            const video = document.getElementById('barcode-scanner-video');
-            if (video && video.srcObject) {
-                const tracks = video.srcObject.getTracks();
-                tracks.forEach(track => track.stop());
-                video.srcObject = null;
-                
-                if (video.parentNode) {
-                    video.parentNode.removeChild(video);
-                }
-            }
-            
-            isScannerActive = false;
-            
-            // Mostrar placeholder
-            const scannerPlaceholder = document.getElementById('scanner-placeholder');
-            if (scannerPlaceholder) {
-                scannerPlaceholder.style.display = 'flex';
-            }
-            
-            // Atualizar controles
-            document.getElementById('start-scanner').classList.remove('inactive');
-            document.getElementById('stop-scanner').classList.add('inactive');
-            
-            showNotification('Leitor de código de barras desativado.', 'success');
-        }
-        
-        // Iniciar detecção de código de barras
-        function startBarcodeDetection(video) {
-            // Usando QuaggaJS para detecção de código de barras
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: video,
-                    constraints: {
-                        width: 640,
-                        height: 480,
-                        facingMode: "environment"
-                    }
-                },
-                decoder: {
-                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"]
-                }
-            }, function(err) {
-                if (err) {
-                    console.error('Erro ao inicializar Quagga:', err);
-                    showNotification('Erro ao inicializar leitor de código de barras.', 'error');
-                    return;
-                }
-                
-                Quagga.start();
-                showNotification('Leitor de código de barras ativado. Aponte para um código.', 'success');
-            });
-            
-            // Detectar códigos de barras
-            Quagga.onDetected(function(result) {
-                if (!canScan) return; // Bloquear leituras se ainda estiver no intervalo
-                
-                const code = result.codeResult.code;
-                const currentTime = new Date().getTime();
-                
-                // Prevenir leituras múltiplas do mesmo código em um curto período
-                if (lastScannedCode === code && lastScanTime && (currentTime - lastScanTime) < 1000) {
-                    return; // Ignorar leituras muito rápidas do mesmo código
-                }
-                
-                lastScannedCode = code;
-                lastScanTime = currentTime;
-                
-                // Bloquear leituras por 1 segundo
-                canScan = false;
-                setTimeout(() => {
-                    canScan = true;
-                }, 1000);
-                
-                // Processar o código
-                processScannedBarcode(code);
-            });
-        }
-        
-        // Processar código escaneado
-        function processScannedBarcode(code) {
-            // Se é o primeiro código, iniciar temporizador e desativar navegação
-            if (!startTime) {
-                startTime = new Date();
-                disableNavigation();
-                showNotification('Separação iniciada. Tempo começou a ser contado.', 'success');
-            }
-            
-            // Processar o código
-            processProductScan(code);
-            
-            // Feedback visual
-            const overlay = document.querySelector('.scanner-overlay');
-            if (overlay) {
-                overlay.style.borderColor = '#10b981';
-                setTimeout(() => {
-                    overlay.style.borderColor = '#2563eb';
-                }, 300);
-            }
-        }
-        
-        // Processar código de barras manual
-        function processBarcode() {
-            if (!canScan) {
-                showNotification('Aguarde 1 segundo entre as leituras.', 'error');
-                return;
-            }
-            
-            const barcodeInput = document.getElementById('barcode-input');
-            const code = barcodeInput.value.trim();
-            
-            if (!code) {
-                showNotification('Por favor, digite um código.', 'error');
-                return;
-            }
-            
-            // Bloquear leituras por 1 segundo
-            canScan = false;
-            setTimeout(() => {
-                canScan = true;
-            }, 1000);
-            
-            // Se é o primeiro código, iniciar temporizador e desativar navegação
-            if (!startTime) {
-                startTime = new Date();
-                disableNavigation();
-                showNotification('Separação iniciada. Tempo começou a ser contado.', 'success');
-            }
-            
-            // Processar o código
-            processProductScan(code);
-            
-            // Limpar campo
-            barcodeInput.value = '';
-            barcodeInput.focus();
-        }
-        
-        // Processar código ao pressionar Enter
-        function handleBarcodeInput(event) {
-            if (event.key === 'Enter') {
-                processBarcode();
-            }
-        }
-        
-        // Processar leitura do produto
-        function processProductScan(code) {
-            const productIndex = products.findIndex(p => p.code === code);
-            
-            if (productIndex !== -1) {
-                const product = products[productIndex];
-                
-                // Verificar se ainda precisa ser escaneado
-                if (product.scanned < product.quantity) {
-                    product.scanned++;
-                    
-                    // Verificar se completou todas as unidades
-                    if (product.scanned >= product.quantity) {
-                        product.completed = 1;
-                        showNotification(`Todas as ${product.quantity} unidades de "${product.name}" foram separadas!`, 'success');
-                    } else {
-                        showNotification(`Unidade ${product.scanned} de ${product.quantity} de "${product.name}" escaneada.`, 'success');
-                    }
-                    
-                    renderProductsList();
-                } else {
-                    showNotification(`Todas as unidades de "${product.name}" já foram separadas.`, 'warning');
-                }
+                showNotification('success', 'Arquivo PDF selecionado com sucesso!');
             } else {
-                const registeredProduct = registeredProducts.find(p => p.code === code);
-                if (registeredProduct) {
-                    // Adicionar novo produto à lista de separação
-                    products.push({
-                        name: registeredProduct.name,
-                        code: registeredProduct.code,
-                        quantity: registeredProduct.quantity,
-                        scanned: 1,
-                        completed: registeredProduct.quantity === 1 ? 1 : 0
-                    });
-                    
-                    renderProductsList();
-                    
-                    if (registeredProduct.quantity === 1) {
-                        showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
-                    } else {
-                        showNotification(`Produto "${registeredProduct.name}" adicionado. Unidade 1 de ${registeredProduct.quantity} escaneada.`, 'success');
-                    }
-                } else {
-                    showNotification(`Código ${code} não encontrado. Verifique o código.`, 'error');
-                }
+                showNotification('error', 'Por favor, selecione um arquivo PDF válido.');
             }
         }
         
-        // Renderizar lista de produtos
-        function renderProductsList() {
-            const productsList = document.getElementById('products-list');
-            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
-            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
-            const pendingItems = totalItems - completedItems;
+        // Função para limpar o arquivo selecionado
+        function clearFile() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h4>Nenhum arquivo analisado</h4>
+                    <p>Faça o upload de um PDF para analisar os produtos</p>
+                </div>
+            `;
+            document.getElementById('importedProductsCard').style.display = 'none';
+        }
+        
+        // Função para analisar o PDF
+        function analyzePDF() {
+            if (!selectedFile) {
+                showNotification('error', 'Nenhum arquivo selecionado para análise.');
+                return;
+            }
             
-            // Atualizar contadores
-            document.getElementById('pending-count').textContent = pendingItems;
-            document.getElementById('completed-count').textContent = completedItems;
+            showNotification('success', 'Analisando PDF...');
             
-            // Atualizar barra de progresso
-            const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+            // Simular análise de PDF (em um caso real, usaria pdf.js para extrair texto)
+            setTimeout(() => {
+                // Dados de exemplo extraídos do PDF fornecido
+                const extractedData = simulatePDFExtraction();
+                processExtractedProducts(extractedData);
+            }, 1500);
+        }
+        
+        // Função para simular a extração de dados do PDF
+        function simulatePDFExtraction() {
+            return [
+                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 14 },
+                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 16 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 10 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 14 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+                { name: "Protetor Solar Nivea Sun Babies & Kids Sensitive Fps 60 100ml", quantity: 1, code: "4005900687241" },
+                { name: "Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 1, code: "7898949409625" },
+                { name: "Gel Creme para Pentear Kolene Curvaturas 500ml", quantity: 2, code: "7908324404098" },
+                { name: "CICATRICURE - ANTISSINAIS 30G Cicatricure Creme Facial Antissinais 30g", quantity: 1 },
+                { name: "CICATRICURE - GEL P/ CICATRIZES 30G Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 2 },
+                { name: "CICATRICURE CONTORNO DE OLHOS 15G Creme Contorno Olhos Rugas Bolsas Olheiras 15g Cicatricure", quantity: 1 },
+                { name: "FACIAL 100G NUTRITIVO + NOTURNO NIVEA - Kit 2 Unidades Creme Facial 100g", quantity: 2 },
+                { name: "FACIAL NIVEA NOTURNO 100G NIVEA - Creme Facial 100g - Antissinais - Nutritivo - Noturno", quantity: 1 },
+                { name: "FACIAL NIVEA PELE NEGRA 100G NIVEA - Creme Hidratante Facial Beleza Radiante 7 em 1 - 100g", quantity: 1 },
+                { name: "H&S - SH ANTICASPA LIMP EFICAZ 400ML HEAD & SHOULDERS - Shampoo Anticaspa Limpeza Eficaz - 400ML", quantity: 1 },
+                { name: "ISACARE - LABIAL C/ 2-MELANCIA- ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-AMORA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-MELANCIA - ISACARE-AMORA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MORANGO - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 3 },
+                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-UVA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+                { name: "ISACARE - LABIAL-CEREJA- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
+                { name: "ISACARE - LABIAL-MELANCIA - ISACARE ISACARE - Protetor Labial FPS 15/50", quantity: 1 },
+                { name: "ISACARE - LABIAL-UVA VERDE- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
+                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 2 },
+                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 2 },
+                { name: "KIT CICATRICURE CR 250G + GEL 30G Kit Cicatricure Antiestrias Creme 250g + Cicatricure Gel 30g", quantity: 1 },
+                { name: "KIT GOLD LIFT DIURNO + NOTURNO CICATRICURE - Kit Gold Lift Creme Noturno 50g + Creme Diurno 50g", quantity: 1 },
+                { name: "KIT TIO NACHO RECONSTRUTOR Tio Nacho Kit Reconstrutor SH 415mL + Cond 200mL", quantity: 2 },
+                { name: "NEUTROGENA - FPS 70 200ML C/ 2 NEUTROGENA - Kit com 2 Protetores Solar Corporal Sun Fresh FPS 70 200ml", quantity: 3 },
+                { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
+                { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
+                { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 5 },
+                { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 2 },
+                { name: "PANTENE - ÓLEO MILAGROSO 95ML Óleo Capilar Pantene Milagroso Queratina Leav-in 95ml", quantity: 1 },
+                { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
+                { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
+                { name: "SOLAR LOREAL EFEITO MAKE UP-2.0 Protetor Facial L'Oréal Solar Expertise FPS 70 Efeito Makeup C/ Cor 30g", quantity: 1 },
+                { name: "TONICO B3 TÔNICO CAPILAR PANTENE ANTIQUEDA BIOTINAMINA B3 52ml", quantity: 1 }
+            ];
+        }
+        
+        // Função para processar produtos extraídos do PDF
+        function processExtractedProducts(products) {
+            // Agrupar produtos com nomes similares
+            const groupedProducts = groupSimilarProducts(products);
             
-            // Atualizar botão de finalizar
-            const finishButton = document.getElementById('finish-button');
-            finishButton.disabled = pendingItems > 0;
-            
-            // Renderizar lista de produtos
-            productsList.innerHTML = products.map(product => {
-                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
-                const isCompleted = product.scanned >= product.quantity;
+            // Comparar produtos extraídos com produtos cadastrados
+            importedProducts = groupedProducts.map(product => {
+                const match = findProductMatch(product, registeredProducts);
                 
-                return `
-                <div class="product-item">
+                return {
+                    originalName: product.name,
+                    name: match ? match.name : product.name,
+                    quantity: product.quantity,
+                    code: match ? match.code : "indisponível",
+                    status: match ? "encontrado" : "não encontrado"
+                };
+            });
+            
+            // Exibir resultados da análise
+            displayAnalysisResults(importedProducts);
+            
+            // Mostrar card de produtos importados
+            document.getElementById('importedProductsCard').style.display = 'block';
+            
+            showNotification('success', `Análise concluída! ${importedProducts.length} produtos encontrados.`);
+        }
+        
+        // Função para agrupar produtos similares
+        function groupSimilarProducts(products) {
+            const grouped = {};
+            
+            products.forEach(product => {
+                const normalizedName = normalizeProductName(product.name);
+                
+                if (grouped[normalizedName]) {
+                    grouped[normalizedName].quantity += product.quantity;
+                } else {
+                    grouped[normalizedName] = {
+                        name: product.name,
+                        quantity: product.quantity,
+                        code: product.code || "indisponível"
+                    };
+                }
+            });
+            
+            return Object.values(grouped);
+        }
+        
+        // Função para normalizar o nome do produto
+        function normalizeProductName(name) {
+            return name.trim()
+                .toUpperCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remover acentos
+                .replace(/[^A-Z0-9\s]/g, '') // Remover caracteres especiais
+                .replace(/\s+/g, ' ') // Remover espaços múltiplos
+                .replace(/^\d+\*UND\s*/i, '') // Remover prefixos como "01*UND"
+                .replace(/\s×\s*\d+$/, ''); // Remover sufixos de quantidade
+        }
+        
+        // Função para encontrar correspondência de produto
+        function findProductMatch(importedProduct, registeredProducts) {
+            const normalizedImported = normalizeProductName(importedProduct.name);
+            
+            // Primeiro, tentar encontrar por código
+            if (importedProduct.code !== "indisponível") {
+                const codeMatch = registeredProducts.find(p => p.code === importedProduct.code);
+                if (codeMatch) return codeMatch;
+            }
+            
+            // Depois, tentar encontrar correspondência exata no nome
+            let match = registeredProducts.find(p => 
+                normalizeProductName(p.name) === normalizedImported
+            );
+            
+            if (match) return match;
+            
+            // Se não encontrar correspondência exata, procurar por palavras-chave
+            const importedWords = normalizedImported.split(' ').filter(word => word.length > 2);
+            
+            for (const registeredProduct of registeredProducts) {
+                const normalizedRegistered = normalizeProductName(registeredProduct.name);
+                const registeredWords = normalizedRegistered.split(' ').filter(word => word.length > 2);
+                
+                // Verificar se há sobreposição significativa de palavras
+                const commonWords = importedWords.filter(word => 
+                    registeredWords.includes(word)
+                );
+                
+                // Se houver pelo menos 2 palavras em comum, considerar como correspondência
+                if (commonWords.length >= 2) {
+                    return registeredProduct;
+                }
+            }
+            
+            // Se nenhuma correspondência for encontrada
+            return null;
+        }
+        
+        // Função para exibir resultados da análise
+        function displayAnalysisResults(products) {
+            const resultsContainer = document.getElementById('analysisResults');
+            const previewContainer = document.getElementById('productPreview');
+            
+            if (products.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h4>Nenhum produto encontrado</h4>
+                        <p>O PDF não contém produtos reconhecíveis</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="progress-container">
+                    <h4>Resumo da Análise</h4>
+                    <div class="progress-count">
+                        <div class="count-item">
+                            <span class="count-value">${products.length}</span>
+                            <span class="count-label">Total</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-value count-completed">${products.filter(p => p.status === 'encontrado').length}</span>
+                            <span class="count-label">Encontrados</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-value count-pending">${products.filter(p => p.status === 'não encontrado').length}</span>
+                            <span class="count-label">Não Encontrados</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(products.filter(p => p.status === 'encontrado').length / products.length) * 100}%"></div>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+            
+            // Atualizar prévia dos produtos
+            previewContainer.innerHTML = '';
+            products.forEach(product => {
+                const productElement = document.createElement('div');
+                productElement.className = 'product-preview-item';
+                productElement.innerHTML = `
+                    <div>
+                        <strong>${product.name}</strong>
+                        <div>Quantidade: ${product.quantity} • Código: ${product.code}</div>
+                    </div>
+                    <span class="product-match ${product.status === 'encontrado' ? 'match-found' : 'match-notfound'}">
+                        ${product.status === 'encontrado' ? '✓' : '✗'}
+                    </span>
+                `;
+                previewContainer.appendChild(productElement);
+            });
+        }
+        
+        // Função para salvar lista importada
+        function saveImportedList() {
+            if (importedProducts.length === 0) {
+                showNotification('error', 'Nenhum produto para salvar.');
+                return;
+            }
+            
+            const listName = document.getElementById('listName').value.trim() || 
+                            `Lista_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}`;
+            
+            // Converter produtos importados para o formato da lista
+            const listProducts = importedProducts.map(product => ({
+                name: product.name,
+                code: product.code,
+                quantity: product.quantity,
+                separated: 0
+            }));
+            
+            // Salvar lista
+            lists[listName] = {
+                name: listName,
+                products: listProducts,
+                date: new Date().toISOString()
+            };
+            
+            localStorage.setItem('lists', JSON.stringify(lists));
+            
+            // Atualizar seletor de listas
+            updateListSelector();
+            
+            showNotification('success', `Lista "${listName}" salva com sucesso!`);
+            
+            // Limpar importação
+            clearFile();
+            document.getElementById('importedProductsCard').style.display = 'none';
+            importedProducts = [];
+        }
+        
+        // Função para carregar listas salvas
+        function loadSavedLists() {
+            updateListSelector();
+        }
+        
+        // Função para atualizar o seletor de listas
+        function updateListSelector() {
+            const listSelector = document.getElementById('lista-selecionada');
+            
+            // Salvar seleção atual
+            const currentSelection = listSelector.value;
+            
+            // Limpar opções existentes (exceto a primeira)
+            while (listSelector.options.length > 1) {
+                listSelector.remove(1);
+            }
+            
+            // Adicionar listas salvas
+            Object.keys(lists).forEach(listName => {
+                const option = document.createElement('option');
+                option.value = listName;
+                option.textContent = listName;
+                listSelector.appendChild(option);
+            });
+            
+            // Restaurar seleção anterior, se ainda existir
+            if (currentSelection && Array.from(listSelector.options).some(opt => opt.value === currentSelection)) {
+                listSelector.value = currentSelection;
+            }
+        }
+        
+        // Função para carregar a lista selecionada
+        function loadSelectedList() {
+            const listName = document.getElementById('lista-selecionada').value;
+            
+            if (listName && lists[listName]) {
+                currentList = lists[listName];
+                updateProductsList();
+                document.getElementById('finish-button').disabled = true;
+            } else {
+                currentList = null;
+                document.getElementById('products-list').innerHTML = '<p>Selecione uma lista para começar</p>';
+            }
+        }
+        
+        // Função para atualizar a lista de produtos na UI
+        function updateProductsList() {
+            const productsList = document.getElementById('products-list');
+            const pendingCount = document.getElementById('pending-count');
+            const completedCount = document.getElementById('completed-count');
+            const progressFill = document.getElementById('progress-fill');
+            
+            if (!currentList || !currentList.products) {
+                productsList.innerHTML = '<p>Nenhum produto na lista</p>';
+                return;
+            }
+            
+            let pending = 0;
+            let completed = 0;
+            
+            productsList.innerHTML = '';
+            
+            currentList.products.forEach((product, index) => {
+                const isCompleted = product.separated >= product.quantity;
+                
+                if (isCompleted) {
+                    completed++;
+                } else {
+                    pending++;
+                }
+                
+                const progressPercent = (product.separated / product.quantity) * 100;
+                
+                const productElement = document.createElement('div');
+                productElement.className = 'product-item';
+                productElement.innerHTML = `
                     <div class="product-info">
                         <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
                             <div class="product-quantity">
-                                <span>${product.scanned}/${product.quantity}</span>
+                                <span>${product.separated}/${product.quantity}</span>
                                 <div class="quantity-progress">
                                     <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="product-actions">
-                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                `;
-            }).join('');
-        }
-        
-        // Adicionar unidade manualmente
-        function manualAddUnit(code) {
-            const productIndex = products.findIndex(p => p.code === code);
-            if (productIndex !== -1) {
-                const product = products[productIndex];
-                
-                if (product.scanned < product.quantity) {
-                    product.scanned++;
-                    
-                    if (product.scanned >= product.quantity) {
-                        product.completed = 1;
-                        showNotification(`Todas as ${product.quantity} unidades de "${product.name}" foram separadas!`, 'success');
-                    } else {
-                        showNotification(`Unidade ${product.scanned} de ${product.quantity} de "${product.name}" adicionada.`, 'success');
-                    }
-                    
-                    renderProductsList();
-                } else {
-                    showNotification(`Todas as unidades de "${product.name}" já foram separadas.`, 'warning');
-                }
-            }
-        }
-        
-        // Remover unidade manualmente
-        function manualRemoveUnit(code) {
-            const productIndex = products.findIndex(p => p.code === code);
-            if (productIndex !== -1) {
-                const product = products[productIndex];
-                
-                if (product.scanned > 0) {
-                    product.scanned--;
-                    product.completed = 0;
-                    
-                    showNotification(`Unidade removida de "${product.name}". Agora: ${product.scanned}/${product.quantity}`, 'success');
-                    renderProductsList();
-                } else {
-                    showNotification(`Não há unidades escaneadas de "${product.name}" para remover.`, 'warning');
-                }
-            }
-        }
-        
-        // Finalizar separação
-        function finishSeparation() {
-            const pendingItems = products.reduce((total, product) => total + (product.quantity - product.scanned), 0);
-            
-            if (pendingItems > 0) {
-                showNotification('Não é possível finalizar. Existem itens pendentes.', 'error');
-                return;
-            }
-            
-            // Parar o scanner se estiver ativo
-            if (isScannerActive) {
-                stopBarcodeScanner();
-            }
-            
-            endTime = new Date();
-            saveReport();
-            showReport();
-        }
-        
-        // Salvar relatório
-        function saveReport() {
-            const timeDiff = endTime - startTime;
-            const seconds = Math.floor(timeDiff / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            
-            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
-            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
-            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-            
-            const report = {
-                id: Date.now(),
-                operator: operatorName,
-                date: new Date().toLocaleDateString('pt-BR'),
-                startTime: startTime.toLocaleTimeString('pt-BR'),
-                endTime: endTime.toLocaleTimeString('pt-BR'),
-                duration: `${minutes}min ${remainingSeconds}s`,
-                itemsProcessed: `${completedItems}/${totalItems}`,
-                efficiency: `${efficiency}%`,
-                products: products.filter(p => p.scanned > 0)
-            };
-            
-            // Carregar relatórios existentes
-            const savedReports = JSON.parse(localStorage.getItem('completedReports') || '[]');
-            savedReports.push(report);
-            localStorage.setItem('completedReports', JSON.stringify(savedReports));
-            
-            completedReports = savedReports;
-        }
-        
-        // Carregar relatórios
-        function loadReports() {
-            const reportsList = document.getElementById('reports-list');
-            if (!reportsList) return;
-            
-            const savedReports = JSON.parse(localStorage.getItem('completedReports') || '[]');
-            completedReports = savedReports;
-            
-            if (savedReports.length === 0) {
-                reportsList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-chart-bar"></i>
-                        </div>
-                        <h3>Nenhum relatório disponível</h3>
-                        <p>Finalize processos para gerar relatórios</p>
+                    <div class="manual-quantity-controls">
+                        <button class="quantity-btn remove" onclick="manualRemoveUnit(${index})">-</button>
+                        <button class="quantity-btn" onclick="manualAddUnit(${index})">+</button>
                     </div>
                 `;
-                return;
-            }
-            
-            // Ordenar relatórios por data (mais recente primeiro)
-            savedReports.sort((a, b) => b.id - a.id);
-            
-            reportsList.innerHTML = savedReports.map(report => `
-                <div class="list-item">
-                    <div class="file-info">
-                        <div class="file-name">Processo #${report.id}</div>
-                        <div class="file-details">
-                            ${report.date} • ${report.duration} • ${report.itemsProcessed} itens
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="action-btn btn-view" onclick="viewReport(${report.id})">
-                            <i class="fas fa-eye"></i> Visualizar
-                        </button>
-                        <button class="action-btn btn-export" onclick="exportSingleReport(${report.id})">
-                            <i class="fas fa-download"></i> Exportar
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Visualizar relatório
-        function viewReport(reportId) {
-            const report = completedReports.find(r => r.id === reportId);
-            if (!report) return;
-            
-            document.getElementById('report-responsavel').textContent = report.operator;
-            document.getElementById('report-data').textContent = report.date;
-            document.getElementById('report-inicio').textContent = report.startTime;
-            document.getElementById('report-termino').textContent = report.endTime;
-            document.getElementById('report-tempo').textContent = report.duration;
-            document.getElementById('report-itens').textContent = report.itemsProcessed;
-            document.getElementById('report-eficiencia').textContent = report.efficiency;
-            
-            // Salvar o ID do relatório atual para exportação
-            document.getElementById('reportModal').setAttribute('data-current-report', reportId);
-            
-            document.getElementById('reportModal').style.display = 'flex';
-        }
-        
-        // Exportar relatório individual
-        function exportSingleReport(reportId) {
-            const report = completedReports.find(r => r.id === reportId);
-            if (!report) return;
-            
-            exportReportData(report);
-        }
-        
-        // Exportar relatório (do modal)
-        function exportReport() {
-            const reportId = parseInt(document.getElementById('reportModal').getAttribute('data-current-report'));
-            const report = completedReports.find(r => r.id === reportId);
-            if (!report) return;
-            
-            exportReportData(report);
-        }
-        
-        // Gerar dados para exportação
-        function exportReportData(report) {
-            let reportText = `RELATÓRIO DE SEPARAÇÃO - Processo #${report.id}\n`;
-            reportText += `============================================\n\n`;
-            reportText += `Responsável: ${report.operator}\n`;
-            reportText += `Data: ${report.date}\n`;
-            reportText += `Hora de Início: ${report.startTime}\n`;
-            reportText += `Hora de Término: ${report.endTime}\n`;
-            reportText += `Tempo Total: ${report.duration}\n`;
-            reportText += `Itens Processados: ${report.itemsProcessed}\n`;
-            reportText += `Eficiência: ${report.efficiency}\n\n`;
-            reportText += `ITENS SEPARADOS:\n`;
-            reportText += `============================================\n`;
-            
-            report.products.forEach(product => {
-                reportText += `${product.name} (Código: ${product.code}) - Quantidade: ${product.scanned}/${product.quantity}\n`;
+                
+                productsList.appendChild(productElement);
             });
             
-            // Criar arquivo para download
-            const blob = new Blob([reportText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `relatorio-separacao-${report.id}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            // Atualizar contadores
+            pendingCount.textContent = pending;
+            completedCount.textContent = completed;
             
-            showNotification('Relatório exportado com sucesso!', 'success');
+            // Atualizar barra de progresso
+            const total = pending + completed;
+            const progress = total > 0 ? (completed / total) * 100 : 0;
+            progressFill.style.width = `${progress}%`;
+            
+            // Atualizar botão de finalizar
+            document.getElementById('finish-button').disabled = pending > 0;
         }
         
-        // Fechar relatório
-        function closeReport() {
-            document.getElementById('reportModal').style.display = 'none';
-            activeProcess = null;
-            enableNavigation();
-            resetSeparation();
+        // Função para adicionar unidade manualmente
+        function manualAddUnit(index) {
+            if (currentList && currentList.products && currentList.products[index]) {
+                const product = currentList.products[index];
+                
+                if (product.separated < product.quantity) {
+                    product.separated++;
+                    
+                    // Atualizar localStorage
+                    lists[currentList.name] = currentList;
+                    localStorage.setItem('lists', JSON.stringify(lists));
+                    
+                    // Atualizar UI
+                    updateProductsList();
+                    
+                    // Verificar se todos os itens foram separados
+                    checkCompletion();
+                } else {
+                    showNotification('warning', `Quantidade máxima já separada para "${product.name}".`);
+                }
+            }
+        }
+        
+        // Função para remover unidade manualmente
+        function manualRemoveUnit(index) {
+            if (currentList && currentList.products && currentList.products[index]) {
+                const product = currentList.products[index];
+                
+                if (product.separated > 0) {
+                    product.separated--;
+                    
+                    // Atualizar localStorage
+                    lists[currentList.name] = currentList;
+                    localStorage.setItem('lists', JSON.stringify(lists));
+                    
+                    // Atualizar UI
+                    updateProductsList();
+                } else {
+                    showNotification('warning', `Não há unidades separadas de "${product.name}" para remover.`);
+                }
+            }
+        }
+        
+        // Função para verificar se a separação foi concluída
+        function checkCompletion() {
+            if (currentList && currentList.products) {
+                const pending = currentList.products.reduce((total, product) => {
+                    return total + (product.quantity - product.separated);
+                }, 0);
+                
+                if (pending === 0) {
+                    document.getElementById('finish-button').disabled = false;
+                    showNotification('success', 'Todos os itens foram separados!');
+                }
+            }
+        }
+        
+        // Função para finalizar a separação
+        function finishSeparation() {
+            if (currentList) {
+                // Registrar no histórico
+                const history = JSON.parse(localStorage.getItem('separationHistory')) || [];
+                history.push({
+                    date: new Date().toISOString(),
+                    list: currentList.name,
+                    operator: currentOperator,
+                    items: currentList.products.reduce((total, product) => total + product.quantity, 0)
+                });
+                
+                localStorage.setItem('separationHistory', JSON.stringify(history));
+                
+                // Limpar lista atual
+                currentList = null;
+                
+                showNotification('success', 'Separação concluída com sucesso!');
+                showScreen('main-screen');
+            }
+        }
+        
+        // Função para iniciar a separação de itens
+        function startSeparation() {
+            showScreen('separacao-itens');
+        }
+        
+        // Função para cancelar a separação e voltar ao menu
+        function cancelSeparation() {
+            if (scannerActive) {
+                stopBarcodeScanner();
+            }
             showScreen('main-screen');
         }
         
-        // Mostrar relatório
-        function showReport() {
-            const timeDiff = endTime - startTime;
-            const seconds = Math.floor(timeDiff / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            
-            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
-            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
-            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-            
-            document.getElementById('report-responsavel').textContent = operatorName;
-            document.getElementById('report-data').textContent = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('report-inicio').textContent = startTime.toLocaleTimeString('pt-BR');
-            document.getElementById('report-termino').textContent = endTime.toLocaleTimeString('pt-BR');
-            document.getElementById('report-tempo').textContent = `${minutes}min ${remainingSeconds}s`;
-            document.getElementById('report-itens').textContent = `${completedItems}/${totalItems}`;
-            document.getElementById('report-eficiencia').textContent = `${efficiency}%`;
-            
-            // Salvar o ID do relatório atual para exportação
-            const reportId = Date.now();
-            document.getElementById('reportModal').setAttribute('data-current-report', reportId);
-            
-            document.getElementById('reportModal').style.display = 'flex';
-        }
-        
-        // Funções para Separação de Pedidos
-        function startNewOrder() {
-            alert('Iniciando novo pedido...');
-            showScreen('confecao-pedidos');
-        }
-        
-        // Funções para Confecção de Pedidos
-        function checkProduct() {
-            const code = document.getElementById('product-code').value;
-            if (code) {
-                const product = registeredProducts.find(p => p.code === code);
-                if (product) {
-                    alert(`Produto "${product.name}" conferido com sucesso!`);
-                    document.getElementById('product-code').value = '';
-                } else {
-                    alert('Código de produto não encontrado. Verifique o código ou cadastre o produto.');
-                }
-            } else {
-                alert('Por favor, digite ou escaneie um código de produto.');
-            }
-        }
-        
-        function finishOrder() {
-            alert('Pedido finalizado com sucesso! Relatório gerado.');
-        }
-        
-        // Configurar área de drag and drop
-        function initDragAndDrop() {
-            const uploadArea = document.getElementById('uploadArea');
-            const importProductsArea = document.getElementById('importProductsArea');
-            
-            // Para upload de listas
-            if (uploadArea) {
-                uploadArea.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    uploadArea.classList.add('dragover');
-                });
-                
-                uploadArea.addEventListener('dragleave', function() {
-                    uploadArea.classList.remove('dragover');
-                });
-                
-                uploadArea.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    
-                    if (e.dataTransfer.files.length) {
-                        handleFiles(e.dataTransfer.files);
-                    }
-                });
-            }
-            
-            // Para importação de produtos
-            if (importProductsArea) {
-                importProductsArea.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    importProductsArea.classList.add('dragover');
-                });
-                
-                importProductsArea.addEventListener('dragleave', function() {
-                    importProductsArea.classList.remove('dragover');
-                });
-                
-                importProductsArea.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    importProductsArea.classList.remove('dragover');
-                    
-                    if (e.dataTransfer.files.length) {
-                        handleProductsFiles(e.dataTransfer.files);
-                    }
-                });
-            }
-        }
-        
-        // Manipular seleção de arquivo via input
-        function handleFileSelect(event) {
-            const files = event.target.files;
-            if (files.length) {
-                handleFiles(files);
-            }
-        }
-        
-        function handleProductsFileSelect(event) {
-            const files = event.target.files;
-            if (files.length) {
-                handleProductsFiles(files);
-            }
-        }
-        
-        // Processar arquivos selecionados
-        function handleFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            
-            // Verificar se é PDF
-            if (file.type !== 'application/pdf') {
-                showNotification('Por favor, selecione um arquivo PDF.', 'error');
-                return;
-            }
-            
-            selectedFile = file;
-            
-            // Atualizar interface
-            document.getElementById('list-name').value = file.name.replace('.pdf', '');
-            updateProcessButton();
-            
-            // Mostrar preview
-            showNotification(`Arquivo "${file.name}" selecionado com sucesso.`, 'success');
-        }
-        
-        function handleProductsFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            
-            // Verificar se é texto
-            if (file.type !== 'text/plain' && !file.name.endsWith('.csv')) {
-                showNotification('Por favor, selecione um arquivo TXT ou CSV.', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('products-content').value = e.target.result;
-                showNotification(`Arquivo "${file.name}" carregado com sucesso.`, 'success');
-            };
-            reader.readAsText(file);
-        }
-        
-        // Atualizar estado do botão de processamento
-        function updateProcessButton() {
-            const listName = document.getElementById('list-name').value;
-            const processBtn = document.getElementById('process-btn');
-            
-            processBtn.disabled = !(listName && selectedFile);
-        }
-        
-        // Processar upload
-        function processUpload() {
-            const listName = document.getElementById('list-name').value;
-            const listType = document.getElementById('list-type').value;
-            
-            if (!listName) {
-                showNotification('Por favor, informe um nome para a lista.', 'error');
-                return;
-            }
-            
-            if (!selectedFile) {
-                showNotification('Por favor, selecione um arquivo PDF.', 'error');
-                return;
-            }
-            
-            simulateProcessing(listName, listType);
-        }
-        
-        // Simular processamento
-        function simulateProcessing(listName, listType) {
-            const processBtn = document.getElementById('process-btn');
-            processBtn.disabled = true;
-            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-            
-            const progressFill = document.getElementById('import-progress-fill');
-            let progress = 0;
-            
-            const interval = setInterval(() => {
-                progress += 5;
-                progressFill.style.width = `${progress}%`;
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    
-                    saveList(listName, listType, selectedFile.name);
-                    
-                    clearForm();
-                    
-                    updateProcessButton();
-                    processBtn.innerHTML = '<i class="fas fa-cog"></i> Processar Lista';
-                    
-                    showNotification('Lista processada com sucesso!', 'success');
-                }
-            }, 100);
-        }
-        
-        // Salvar lista no armazenamento local
-        function saveList(name, type, filename) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            
-            const newList = {
-                id: Date.now(),
-                name: name,
-                type: type,
-                filename: filename,
-                date: new Date().toISOString(),
-                items: generateSampleItems()
-            };
-            
-            savedLists.push(newList);
-            
-            localStorage.setItem('importedLists', JSON.stringify(savedLists));
-            
-            loadSavedLists();
-        }
-        
-        // Gerar itens de exemplo
-        function generateSampleItems() {
-            const items = [];
-            const itemCount = Math.floor(Math.random() * 10) + 5;
-            
-            for (let i = 1; i <= itemCount; i++) {
-                items.push({
-                    id: i,
-                    name: `Produto ${i}`,
-                    code: `COD${1000 + i}`,
-                    quantity: Math.floor(Math.random() * 5) + 1
-                });
-            }
-            
-            return items;
-        }
-        
-        // Carregar listas salvas
-        function loadSavedLists() {
-            const listContainer = document.getElementById('list-container');
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            
-            if (savedLists.length === 0) {
-                if (listContainer) {
-                    listContainer.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">
-                                <i class="far fa-folder-open"></i>
-                            </div>
-                            <h3>Nenhuma lista importada</h3>
-                            <p>Faça upload de uma lista PDF para começar</p>
-                        </div>
-                    `;
-                }
-                return;
-            }
-            
-            if (listContainer) {
-                listContainer.innerHTML = savedLists.map(list => `
-                    <div class="file-item">
-                        <div class="file-info">
-                            <div class="file-name">${list.name}</div>
-                            <div class="file-details">
-                                ${formatDate(list.date)} • 
-                                ${list.items.length} itens • 
-                                ${getListTypeName(list.type)}
-                            </div>
-                            <span class="status-badge status-concluido">Processado</span>
-                        </div>
-                        <div class="file-actions">
-                            <button class="action-btn btn-view" onclick="viewList(${list.id})">
-                                <i class="fas fa-eye"></i> Visualizar
-                            </button>
-                            <button class="action-btn btn-edit" onclick="editList(${list.id})">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button class="action-btn btn-delete" onclick="deleteList(${list.id})">
-                                <i class="fas fa-trash"></i> Excluir
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-        
-        // Visualizar lista
-        function viewList(listId) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            const list = savedLists.find(l => l.id === listId);
-            
-            if (list) {
-                alert(`Visualizando lista: ${list.name}\nItens: ${list.items.length}\nData: ${formatDate(list.date)}`);
-            }
-        }
-        
-        // Editar lista
-        function editList(listId) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            const list = savedLists.find(l => l.id === listId);
-            
-            if (list) {
-                document.getElementById('list-name').value = list.name;
-                document.getElementById('list-type').value = list.type;
-                document.getElementById('process-btn').disabled = false;
-                
-                showNotification(`Editando lista "${list.name}". Faça as alterações necessárias e processe novamente.`, 'success');
-                
-                window.scrollTo(0, 0);
-            }
-        }
-        
-        // Excluir lista
-        function deleteList(listId) {
-            if (confirm('Tem certeza que deseja excluir esta lista?')) {
-                const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-                const updatedLists = savedLists.filter(list => list.id !== listId);
-                
-                localStorage.setItem('importedLists', JSON.stringify(updatedLists));
-                
-                loadSavedLists();
-                
-                showNotification('Lista excluída com sucesso.', 'success');
-            }
-        }
-        
-        // Limpar formulário
-        function clearForm() {
-            document.getElementById('list-name').value = '';
-            document.getElementById('list-type').value = 'separacao';
-            document.getElementById('import-progress-fill').style.width = '0%';
-            document.getElementById('list-file').value = '';
-            document.getElementById('process-btn').disabled = true;
-            selectedFile = null;
-        }
-        
-        // Funções para a tela de adicionar produto
+        // Função para adicionar um novo produto
         function addProduct() {
             const name = document.getElementById('product-name').value.trim();
-            const code = document.getElementById('barcode').value.trim();
-            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            const code = document.getElementById('product-code').value.trim();
             
-            if (!name || !code) {
-                showNotification('Por favor, preencha todos os campos.', 'error');
+            if (!name) {
+                showNotification('error', 'Por favor, informe o nome do produto.');
                 return;
             }
             
-            // Verificar se o código já existe
+            if (!code) {
+                showNotification('error', 'Por favor, informe o código do produto.');
+                return;
+            }
+            
+            // Verificar se o produto já existe
             if (registeredProducts.some(p => p.code === code)) {
-                showNotification('Já existe um produto com este código.', 'error');
+                showNotification('error', 'Já existe um produto com este código.');
                 return;
             }
             
             // Adicionar produto
-            registeredProducts.push({ name, code, quantity });
-            saveRegisteredProducts();
+            registeredProducts.push({ name, code });
+            
+            // Salvar no localStorage
+            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
             
             // Limpar formulário
             document.getElementById('product-name').value = '';
-            document.getElementById('barcode').value = '';
-            document.getElementById('quantity').value = '1';
+            document.getElementById('product-code').value = '';
             
-            showNotification(`Produto "${name}" adicionado com sucesso!`, 'success');
+            showNotification('success', 'Produto adicionado com sucesso!');
+            
+            // Atualizar lista de produtos
             loadRegisteredProducts();
         }
         
-        function importProducts() {
-            const content = document.getElementById('products-content').value.trim();
-            
-            if (!content) {
-                showNotification('Por favor, insira o conteúdo ou faça upload de um arquivo.', 'error');
-                return;
-            }
-            
-            const lines = content.split('\n');
-            let importedCount = 0;
-            let skippedCount = 0;
-            
-            for (const line of lines) {
-                const [name, code, quantity] = line.split(',').map(item => item.trim());
-                
-                if (name && code) {
-                    const qty = parseInt(quantity) || 1;
-                    
-                    // Verificar se o código já existe
-                    if (!registeredProducts.some(p => p.code === code)) {
-                        registeredProducts.push({ name, code, quantity: qty });
-                        importedCount++;
-                    } else {
-                        skippedCount++;
-                    }
-                }
-            }
-            
-            if (importedCount > 0) {
-                saveRegisteredProducts();
-                showNotification(`${importedCount} produtos importados com sucesso! ${skippedCount > 0 ? `${skippedCount} produtos duplicados foram ignorados.` : ''}`, 'success');
-            } else if (skippedCount > 0) {
-                showNotification(`Todos os ${skippedCount} produtos já existiam na base e foram ignorados.`, 'warning');
-            } else {
-                showNotification('Nenhum produto válido encontrado para importação.', 'error');
-            }
-            
-            loadRegisteredProducts();
-        }
-        
-        function saveRegisteredProducts() {
-            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
-        }
-        
+        // Função para carregar produtos cadastrados
         function loadRegisteredProducts() {
-            const savedProducts = localStorage.getItem('registeredProducts');
-            if (savedProducts) {
-                registeredProducts = JSON.parse(savedProducts);
-            }
-            
-            const productsContainer = document.getElementById('products-container');
-            if (!productsContainer) return;
+            const productsContainer = document.getElementById('products-list-registered');
             
             if (registeredProducts.length === 0) {
                 productsContainer.innerHTML = `
@@ -2506,174 +1852,129 @@
                         <div class="empty-icon">
                             <i class="fas fa-box-open"></i>
                         </div>
-                        <h3>Nenhum produto cadastrado</h3>
-                        <p>Adicione produtos manualmente ou importe uma lista</p>
+                        <h4>Nenhum produto cadastrado</h4>
+                        <p>Adicione produtos para começar</p>
                     </div>
                 `;
                 return;
             }
             
-            productsContainer.innerHTML = registeredProducts.map(product => `
-                <div class="list-item">
-                    <div class="file-info">
-                        <div class="file-name">${product.name}</div>
-                        <div class="file-details">Código: ${product.code} • Quantidade: x${product.quantity}</div>
-                    </div>
-                    <div class="file-actions">
+            let html = '';
+            registeredProducts.forEach(product => {
+                html += `
+                    <div class="list-item">
+                        <div>
+                            <strong>${product.name}</strong>
+                            <div>Código: ${product.code}</div>
+                        </div>
                         <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
-                            <i class="fas fa-trash"></i> Excluir
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
-                </div>
-            `).join('');
+                `;
+            });
+            
+            productsContainer.innerHTML = html;
         }
         
+        // Função para buscar produtos
+        function searchProducts(query) {
+            const filteredProducts = registeredProducts.filter(product => 
+                product.name.toLowerCase().includes(query.toLowerCase()) || 
+                product.code.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            const productsContainer = document.getElementById('products-list-registered');
+            
+            if (filteredProducts.length === 0) {
+                productsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h4>Nenhum produto encontrado</h4>
+                        <p>Tente usar outros termos de busca</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredProducts.forEach(product => {
+                html += `
+                    <div class="list-item">
+                        <div>
+                            <strong>${product.name}</strong>
+                            <div>Código: ${product.code}</div>
+                        </div>
+                        <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            
+            productsContainer.innerHTML = html;
+        }
+        
+        // Função para excluir produto
         function deleteProduct(code) {
             if (confirm('Tem certeza que deseja excluir este produto?')) {
                 registeredProducts = registeredProducts.filter(p => p.code !== code);
-                saveRegisteredProducts();
+                localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
                 loadRegisteredProducts();
-                showNotification('Produto excluído com sucesso.', 'success');
+                showNotification('success', 'Produto excluído com sucesso.');
+            }
+        }
+        
+        // Funções do scanner de código de barras (simuladas)
+        function initBarcodeScanner() {
+            showNotification('success', 'Scanner de código de barras ativado!');
+            document.getElementById('scanner-placeholder').style.display = 'none';
+            document.getElementById('start-scanner').classList.add('inactive');
+            document.getElementById('stop-scanner').classList.remove('inactive');
+            scannerActive = true;
+        }
+        
+        function stopBarcodeScanner() {
+            showNotification('info', 'Scanner de código de barras desativado.');
+            document.getElementById('scanner-placeholder').style.display = 'flex';
+            document.getElementById('start-scanner').classList.remove('inactive');
+            document.getElementById('stop-scanner').classList.add('inactive');
+            scannerActive = false;
+        }
+        
+        function handleBarcodeInput(event) {
+            if (event.key === 'Enter') {
+                processBarcode();
+            }
+        }
+        
+        function processBarcode() {
+            const barcodeInput = document.getElementById('barcode-input');
+            const code = barcodeInput.value.trim();
+            
+            if (code) {
+                // Simular processamento de código de barras
+                showNotification('success', `Código ${code} processado!`);
+                barcodeInput.value = '';
+                
+                // Em uma implementação real, aqui você processaria o código
+                // e atualizaria a lista de produtos
+            } else {
+                showNotification('error', 'Por favor, digite um código.');
             }
         }
         
         // Funções de filtro e ordenação
         function filterProducts(filter) {
-            document.querySelectorAll('.filter-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            let filteredProducts = [];
-            
-            if (filter === 'all') {
-                filteredProducts = products;
-            } else if (filter === 'pending') {
-                filteredProducts = products.filter(p => p.scanned < p.quantity);
-            } else if (filter === 'completed') {
-                filteredProducts = products.filter(p => p.scanned >= p.quantity);
-            }
-            
-            const productsList = document.getElementById('products-list');
-            productsList.innerHTML = filteredProducts.map(product => {
-                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
-                const isCompleted = product.scanned >= product.quantity;
-                
-                return `
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
-                        <div>
-                            <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
-                            <div class="product-quantity">
-                                <span>${product.scanned}/${product.quantity}</span>
-                                <div class="quantity-progress">
-                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="product-actions">
-                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                `;
-            }).join('');
+            // Esta função seria implementada para filtrar os produtos na lista
+            showNotification('info', `Filtrando por: ${filter}`);
         }
         
         function sortProducts(criteria) {
-            document.querySelectorAll('.filter-button').forEach(button => {
-                if (button.textContent.includes('Ordenar')) {
-                    button.classList.remove('active');
-                }
-            });
-            event.target.classList.add('active');
-            
-            let sortedProducts = [...products];
-            
-            if (criteria === 'name') {
-                sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-            } else if (criteria === 'quantity') {
-                sortedProducts.sort((a, b) => b.quantity - a.quantity);
-            }
-            
-            const productsList = document.getElementById('products-list');
-            productsList.innerHTML = sortedProducts.map(product => {
-                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
-                const isCompleted = product.scanned >= product.quantity;
-                
-                return `
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
-                        <div>
-                            <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
-                            <div class="product-quantity">
-                                <span>${product.scanned}/${product.quantity}</span>
-                                <div class="quantity-progress">
-                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="product-actions">
-                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                `;
-            }).join('');
-        }
-        
-        // Helper: Formatar data
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('pt-BR');
-        }
-        
-        // Helper: Obter nome do tipo de lista
-        function getListTypeName(type) {
-            const types = {
-                'separacao': 'Separação de Itens',
-                'pedidos': 'Separação de Pedidos',
-                'confecao': 'Confecção de Pedidos'
-            };
-            
-            return types[type] || 'Desconhecido';
-        }
-        
-        // Mostrar notificação
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notification-icon');
-            const text = document.getElementById('notification-text');
-            
-            notification.className = 'notification';
-            if (type === 'success') {
-                notification.classList.add('notification-success');
-                icon.className = 'notification-icon fas fa-check-circle';
-            } else {
-                notification.classList.add('notification-error');
-                icon.className = 'notification-icon fas fa-exclamation-circle';
-            }
-            
-            text.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+            // Esta função seria implementada para ordenar os produtos na lista
+            showNotification('info', `Ordenando por: ${criteria}`);
         }
     </script>
 </body>
