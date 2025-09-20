@@ -731,6 +731,68 @@
             background-color: #9ca3af;
         }
         
+        .progress-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .progress-text {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+        
+        .progress-count {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .count-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .count-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .count-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .count-pending {
+            color: var(--warning-color);
+        }
+        
+        .count-completed {
+            color: var(--success-color);
+        }
+        
+        .product-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        
+        .quantity-progress {
+            width: 60px;
+            height: 6px;
+            background-color: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .quantity-progress-fill {
+            height: 100%;
+            background-color: var(--success-color);
+            border-radius: 3px;
+        }
+        
         @media (max-width: 600px) {
             .file-item {
                 flex-direction: column;
@@ -866,9 +928,22 @@
             </div>
             
             <div class="card">
-                <h3>Itens para Separar <span id="progress-text">(0/5)</span></h3>
+                <div class="progress-container">
+                    <h3>Itens para Separar</h3>
+                    <div class="progress-count">
+                        <div class="count-item">
+                            <span class="count-value count-pending" id="pending-count">0</span>
+                            <span class="count-label">Pendentes</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-value count-completed" id="completed-count">0</span>
+                            <span class="count-label">Concluídos</span>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: 0%"></div>
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
                 </div>
                 
                 <div class="filter-buttons">
@@ -1084,7 +1159,7 @@
                 </div>
                 
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                    <div class="progress-fill" id="import-progress-fill" style="width: 0%"></div>
                 </div>
                 
                 <button class="button button-success" onclick="processUpload()" id="process-btn">
@@ -1278,6 +1353,7 @@
         let lastScannedCode = null;
         let lastScanTime = null;
         let isScannerActive = false;
+        let canScan = true; // Controle para intervalo entre leituras
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
@@ -1305,9 +1381,13 @@
             }
             
             // Adicionar event listeners para os inputs
-            document.getElementById('list-name').addEventListener('input', updateProcessButton);
-            document.getElementById('list-file').addEventListener('change', handleFileSelect);
-            document.getElementById('products-file').addEventListener('change', handleProductsFileSelect);
+            const listNameInput = document.getElementById('list-name');
+            const listFileInput = document.getElementById('list-file');
+            const productsFileInput = document.getElementById('products-file');
+            
+            if (listNameInput) listNameInput.addEventListener('input', updateProcessButton);
+            if (listFileInput) listFileInput.addEventListener('change', handleFileSelect);
+            if (productsFileInput) productsFileInput.addEventListener('change', handleProductsFileSelect);
             
             // Inicializar drag and drop
             initDragAndDrop();
@@ -1334,11 +1414,11 @@
         // Carregar produtos de exemplo
         function loadSampleProducts() {
             products = [
-                { name: "Produto A", code: "123456", quantity: 30, completed: false },
-                { name: "Produto B", code: "789012", quantity: 15, completed: false },
-                { name: "Produto C", code: "345678", quantity: 45, completed: false },
-                { name: "Produto D", code: "901234", quantity: 20, completed: false },
-                { name: "Produto E", code: "567890", quantity: 10, completed: false }
+                { name: "Produto A", code: "123456", quantity: 30, completed: 0, scanned: 0 },
+                { name: "Produto B", code: "789012", quantity: 15, completed: 0, scanned: 0 },
+                { name: "Produto C", code: "345678", quantity: 45, completed: 0, scanned: 0 },
+                { name: "Produto D", code: "901234", quantity: 20, completed: 0, scanned: 0 },
+                { name: "Produto E", code: "567890", quantity: 10, completed: 0, scanned: 0 }
             ];
             
             // Carregar produtos registrados do localStorage ou usar padrão
@@ -1475,7 +1555,8 @@
         // Resetar separação
         function resetSeparation() {
             products.forEach(product => {
-                product.completed = false;
+                product.scanned = 0;
+                product.completed = 0;
             });
             startTime = null;
             renderProductsList();
@@ -1590,6 +1671,8 @@
             
             // Detectar códigos de barras
             Quagga.onDetected(function(result) {
+                if (!canScan) return; // Bloquear leituras se ainda estiver no intervalo
+                
                 const code = result.codeResult.code;
                 const currentTime = new Date().getTime();
                 
@@ -1600,6 +1683,12 @@
                 
                 lastScannedCode = code;
                 lastScanTime = currentTime;
+                
+                // Bloquear leituras por 1 segundo
+                canScan = false;
+                setTimeout(() => {
+                    canScan = true;
+                }, 1000);
                 
                 // Processar o código
                 processScannedBarcode(code);
@@ -1616,7 +1705,7 @@
             }
             
             // Processar o código
-            markProductAsScanned(code);
+            processProductScan(code);
             
             // Feedback visual
             const overlay = document.querySelector('.scanner-overlay');
@@ -1630,6 +1719,11 @@
         
         // Processar código de barras manual
         function processBarcode() {
+            if (!canScan) {
+                showNotification('Aguarde 1 segundo entre as leituras.', 'error');
+                return;
+            }
+            
             const barcodeInput = document.getElementById('barcode-input');
             const code = barcodeInput.value.trim();
             
@@ -1637,6 +1731,12 @@
                 showNotification('Por favor, digite um código.', 'error');
                 return;
             }
+            
+            // Bloquear leituras por 1 segundo
+            canScan = false;
+            setTimeout(() => {
+                canScan = true;
+            }, 1000);
             
             // Se é o primeiro código, iniciar temporizador e desativar navegação
             if (!startTime) {
@@ -1646,7 +1746,7 @@
             }
             
             // Processar o código
-            markProductAsScanned(code);
+            processProductScan(code);
             
             // Limpar campo
             barcodeInput.value = '';
@@ -1660,25 +1760,48 @@
             }
         }
         
-        // Marcar produto como escaneado
-        function markProductAsScanned(code) {
+        // Processar leitura do produto
+        function processProductScan(code) {
             const productIndex = products.findIndex(p => p.code === code);
             
             if (productIndex !== -1) {
-                products[productIndex].completed = true;
-                renderProductsList();
-                showNotification(`Produto "${products[productIndex].name}" marcado como separado!`, 'success');
+                const product = products[productIndex];
+                
+                // Verificar se ainda precisa ser escaneado
+                if (product.scanned < product.quantity) {
+                    product.scanned++;
+                    
+                    // Verificar se completou todas as unidades
+                    if (product.scanned >= product.quantity) {
+                        product.completed = 1;
+                        showNotification(`Todas as ${product.quantity} unidades de "${product.name}" foram separadas!`, 'success');
+                    } else {
+                        showNotification(`Unidade ${product.scanned} de ${product.quantity} de "${product.name}" escaneada.`, 'success');
+                    }
+                    
+                    renderProductsList();
+                } else {
+                    showNotification(`Todas as unidades de "${product.name}" já foram separadas.`, 'warning');
+                }
             } else {
                 const registeredProduct = registeredProducts.find(p => p.code === code);
                 if (registeredProduct) {
+                    // Adicionar novo produto à lista de separação
                     products.push({
                         name: registeredProduct.name,
                         code: registeredProduct.code,
                         quantity: registeredProduct.quantity,
-                        completed: true
+                        scanned: 1,
+                        completed: registeredProduct.quantity === 1 ? 1 : 0
                     });
+                    
                     renderProductsList();
-                    showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
+                    
+                    if (registeredProduct.quantity === 1) {
+                        showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
+                    } else {
+                        showNotification(`Produto "${registeredProduct.name}" adicionado. Unidade 1 de ${registeredProduct.quantity} escaneada.`, 'success');
+                    }
                 } else {
                     showNotification(`Código ${code} não encontrado. Verifique o código.`, 'error');
                 }
@@ -1688,57 +1811,101 @@
         // Renderizar lista de produtos
         function renderProductsList() {
             const productsList = document.getElementById('products-list');
-            const pendingCount = products.filter(p => !p.completed).length;
-            const totalCount = products.length;
-            const completedCount = totalCount - pendingCount;
+            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
+            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
+            const pendingItems = totalItems - completedItems;
             
-            // Atualizar texto de progresso
-            document.getElementById('progress-text').textContent = `(${completedCount}/${totalCount})`;
+            // Atualizar contadores
+            document.getElementById('pending-count').textContent = pendingItems;
+            document.getElementById('completed-count').textContent = completedItems;
             
             // Atualizar barra de progresso
-            const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-            document.querySelector('.progress-fill').style.width = `${progressPercent}%`;
+            const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
             
             // Atualizar botão de finalizar
             const finishButton = document.getElementById('finish-button');
-            finishButton.disabled = pendingCount > 0;
+            finishButton.disabled = pendingItems > 0;
             
             // Renderizar lista de produtos
-            productsList.innerHTML = products.map(product => `
+            productsList.innerHTML = products.map(product => {
+                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
+                const isCompleted = product.scanned >= product.quantity;
+                
+                return `
                 <div class="product-item">
                     <div class="product-info">
-                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
+                            <p>Código: ${product.code}</p>
+                            <div class="product-quantity">
+                                <span>${product.scanned}/${product.quantity}</span>
+                                <div class="quantity-progress">
+                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
-                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
+                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
+                            <i class="fas fa-minus"></i>
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
-        // Alternar status do produto
-        function toggleProduct(code) {
+        // Adicionar unidade manualmente
+        function manualAddUnit(code) {
             const productIndex = products.findIndex(p => p.code === code);
             if (productIndex !== -1) {
-                products[productIndex].completed = !products[productIndex].completed;
-                renderProductsList();
+                const product = products[productIndex];
                 
-                const status = products[productIndex].completed ? "marcado como separado" : "marcado como pendente";
-                showNotification(`Produto "${products[productIndex].name}" ${status}!`, 'success');
+                if (product.scanned < product.quantity) {
+                    product.scanned++;
+                    
+                    if (product.scanned >= product.quantity) {
+                        product.completed = 1;
+                        showNotification(`Todas as ${product.quantity} unidades de "${product.name}" foram separadas!`, 'success');
+                    } else {
+                        showNotification(`Unidade ${product.scanned} de ${product.quantity} de "${product.name}" adicionada.`, 'success');
+                    }
+                    
+                    renderProductsList();
+                } else {
+                    showNotification(`Todas as unidades de "${product.name}" já foram separadas.`, 'warning');
+                }
+            }
+        }
+        
+        // Remover unidade manualmente
+        function manualRemoveUnit(code) {
+            const productIndex = products.findIndex(p => p.code === code);
+            if (productIndex !== -1) {
+                const product = products[productIndex];
+                
+                if (product.scanned > 0) {
+                    product.scanned--;
+                    product.completed = 0;
+                    
+                    showNotification(`Unidade removida de "${product.name}". Agora: ${product.scanned}/${product.quantity}`, 'success');
+                    renderProductsList();
+                } else {
+                    showNotification(`Não há unidades escaneadas de "${product.name}" para remover.`, 'warning');
+                }
             }
         }
         
         // Finalizar separação
         function finishSeparation() {
-            const pendingCount = products.filter(p => !p.completed).length;
+            const pendingItems = products.reduce((total, product) => total + (product.quantity - product.scanned), 0);
             
-            if (pendingCount > 0) {
+            if (pendingItems > 0) {
                 showNotification('Não é possível finalizar. Existem itens pendentes.', 'error');
                 return;
             }
@@ -1760,8 +1927,8 @@
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
             
-            const completedItems = products.filter(p => p.completed).length;
-            const totalItems = products.length;
+            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
+            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
             const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
             
             const report = {
@@ -1773,7 +1940,7 @@
                 duration: `${minutes}min ${remainingSeconds}s`,
                 itemsProcessed: `${completedItems}/${totalItems}`,
                 efficiency: `${efficiency}%`,
-                products: products.filter(p => p.completed)
+                products: products.filter(p => p.scanned > 0)
             };
             
             // Carregar relatórios existentes
@@ -1879,7 +2046,7 @@
             reportText += `============================================\n`;
             
             report.products.forEach(product => {
-                reportText += `${product.name} (Código: ${product.code}) - Quantidade: x${product.quantity}\n`;
+                reportText += `${product.name} (Código: ${product.code}) - Quantidade: ${product.scanned}/${product.quantity}\n`;
             });
             
             // Criar arquivo para download
@@ -1912,8 +2079,8 @@
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
             
-            const completedItems = products.filter(p => p.completed).length;
-            const totalItems = products.length;
+            const totalItems = products.reduce((total, product) => total + product.quantity, 0);
+            const completedItems = products.reduce((total, product) => total + product.scanned, 0);
             const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
             
             document.getElementById('report-responsavel').textContent = operatorName;
@@ -1963,23 +2130,25 @@
             const importProductsArea = document.getElementById('importProductsArea');
             
             // Para upload de listas
-            uploadArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', function() {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
+            if (uploadArea) {
+                uploadArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
                 
-                if (e.dataTransfer.files.length) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
+                uploadArea.addEventListener('dragleave', function() {
+                    uploadArea.classList.remove('dragover');
+                });
+                
+                uploadArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    
+                    if (e.dataTransfer.files.length) {
+                        handleFiles(e.dataTransfer.files);
+                    }
+                });
+            }
             
             // Para importação de produtos
             if (importProductsArea) {
@@ -2091,7 +2260,7 @@
             processBtn.disabled = true;
             processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
             
-            const progressFill = document.getElementById('progress-fill');
+            const progressFill = document.getElementById('import-progress-fill');
             let progress = 0;
             
             const interval = setInterval(() => {
@@ -2180,7 +2349,7 @@
                                 ${list.items.length} itens • 
                                 ${getListTypeName(list.type)}
                             </div>
-                            <span class="status-badge status-success">Processado</span>
+                            <span class="status-badge status-concluido">Processado</span>
                         </div>
                         <div class="file-actions">
                             <button class="action-btn btn-view" onclick="viewList(${list.id})">
@@ -2242,7 +2411,7 @@
         function clearForm() {
             document.getElementById('list-name').value = '';
             document.getElementById('list-type').value = 'separacao';
-            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('import-progress-fill').style.width = '0%';
             document.getElementById('list-file').value = '';
             document.getElementById('process-btn').disabled = true;
             selectedFile = null;
@@ -2380,28 +2549,42 @@
             if (filter === 'all') {
                 filteredProducts = products;
             } else if (filter === 'pending') {
-                filteredProducts = products.filter(p => !p.completed);
+                filteredProducts = products.filter(p => p.scanned < p.quantity);
             } else if (filter === 'completed') {
-                filteredProducts = products.filter(p => p.completed);
+                filteredProducts = products.filter(p => p.scanned >= p.quantity);
             }
             
             const productsList = document.getElementById('products-list');
-            productsList.innerHTML = filteredProducts.map(product => `
+            productsList.innerHTML = filteredProducts.map(product => {
+                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
+                const isCompleted = product.scanned >= product.quantity;
+                
+                return `
                 <div class="product-item">
                     <div class="product-info">
-                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
+                            <p>Código: ${product.code}</p>
+                            <div class="product-quantity">
+                                <span>${product.scanned}/${product.quantity}</span>
+                                <div class="quantity-progress">
+                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
-                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
+                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
+                            <i class="fas fa-minus"></i>
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         function sortProducts(criteria) {
@@ -2421,22 +2604,36 @@
             }
             
             const productsList = document.getElementById('products-list');
-            productsList.innerHTML = sortedProducts.map(product => `
+            productsList.innerHTML = sortedProducts.map(product => {
+                const progressPercent = product.quantity > 0 ? (product.scanned / product.quantity) * 100 : 0;
+                const isCompleted = product.scanned >= product.quantity;
+                
+                return `
                 <div class="product-item">
                     <div class="product-info">
-                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div class="status-indicator ${isCompleted ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
+                            <p>Código: ${product.code}</p>
+                            <div class="product-quantity">
+                                <span>${product.scanned}/${product.quantity}</span>
+                                <div class="quantity-progress">
+                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
-                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
+                        <button class="action-button scan" onclick="manualAddUnit('${product.code}')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-button delete" onclick="manualRemoveUnit('${product.code}')">
+                            <i class="fas fa-minus"></i>
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // Helper: Formatar data
