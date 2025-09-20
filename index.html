@@ -10,6 +10,8 @@
     <link rel="icon" href="icon-192x192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192x192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Incluir a biblioteca QuaggaJS para leitura de código de barras -->
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         :root {
             --primary-color: #2563eb;
@@ -153,6 +155,11 @@
             width: 100%;
         }
         
+        .button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
         .button-success {
             background-color: var(--success-color);
         }
@@ -233,6 +240,13 @@
             margin-bottom: 16px;
             border-radius: 8px;
             overflow: hidden;
+            position: relative;
+        }
+        
+        #barcode-scanner {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .scanner-placeholder {
@@ -243,6 +257,10 @@
             align-items: center;
             color: white;
             flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
         }
         
         .scanner-animation {
@@ -251,6 +269,18 @@
             background-color: var(--primary-color);
             position: relative;
             animation: scan 2s infinite linear;
+        }
+        
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 40%;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
         }
         
         @keyframes scan {
@@ -284,6 +314,11 @@
         
         .footer-button.active {
             color: var(--primary-color);
+        }
+        
+        .footer-button:disabled {
+            color: #d1d5db;
+            cursor: not-allowed;
         }
         
         .footer-button i {
@@ -483,6 +518,11 @@
             color: var(--danger-color);
         }
         
+        .btn-export {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
         .empty-state {
             text-align: center;
             padding: 30px 20px;
@@ -617,6 +657,80 @@
             font-weight: 500;
         }
         
+        .operator-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+        
+        .operator-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .manual-input-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .manual-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .manual-button {
+            padding: 12px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .quantity-badge {
+            background-color: #e5e7eb;
+            color: #374151;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .scanner-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .scanner-toggle {
+            flex: 1;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .scanner-toggle.inactive {
+            background-color: #9ca3af;
+        }
+        
         @media (max-width: 600px) {
             .file-item {
                 flex-direction: column;
@@ -637,19 +751,44 @@
             .filter-buttons {
                 flex-direction: column;
             }
+            
+            .manual-input-container {
+                flex-direction: column;
+            }
+            
+            .scanner-controls {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Modal para inserir nome do operador -->
+    <div class="operator-modal" id="operatorModal">
+        <div class="operator-content">
+            <h2>Identificação do Operador</h2>
+            <p>Por favor, informe seu nome para registrar suas atividades:</p>
+            
+            <div class="input-group">
+                <label for="operator-name">Seu Nome</label>
+                <input type="text" id="operator-name" placeholder="Digite seu nome completo">
+            </div>
+            
+            <button class="button button-success" onclick="setOperator()">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+
     <!-- Tela Principal/Menu -->
-    <div id="main-screen" class="screen active">
+    <div id="main-screen" class="screen">
         <header>
             <h1>App de Separação</h1>
         </header>
         
         <div class="container">
             <div class="menu-container">
-                <div class="menu-item" onclick="showScreen('separacao-itens')">
+                <div class="menu-item" onclick="startSeparation()">
                     <div class="icon"><i class="fas fa-box"></i></div>
                     <h2>Separação de Itens</h2>
                     <p>Registro de separação individual de produtos</p>
@@ -678,6 +817,12 @@
                     <h2>Adicionar Produto</h2>
                     <p>Cadastrar produtos manualmente ou por importação</p>
                 </div>
+                
+                <div class="menu-item" onclick="showScreen('relatorios')">
+                    <div class="icon"><i class="fas fa-chart-bar"></i></div>
+                    <h2>Relatórios</h2>
+                    <p>Visualizar e exportar processos concluídos</p>
+                </div>
             </div>
         </div>
     </div>
@@ -685,27 +830,45 @@
     <!-- Tela de Separação de Itens -->
     <div id="separacao-itens" class="screen">
         <div class="sub-header">
-            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <button class="back-button" onclick="cancelSeparation()"><i class="fas fa-arrow-left"></i></button>
             <h1>Separação de Itens</h1>
         </div>
         
         <div class="container">
             <div class="card">
-                <h3>Scanner de Código de Barras</h3>
+                <h3>Leitor de Código de Barras</h3>
+                
+                <div class="scanner-controls">
+                    <button id="start-scanner" class="scanner-toggle" onclick="initBarcodeScanner()">
+                        <i class="fas fa-camera"></i> Ativar Câmera
+                    </button>
+                    <button id="stop-scanner" class="scanner-toggle inactive" onclick="stopBarcodeScanner()">
+                        <i class="fas fa-stop"></i> Parar Câmera
+                    </button>
+                </div>
+                
                 <div class="scanner-container">
-                    <div class="scanner-placeholder">
-                        <i class="fas fa-barcode" style="font-size: 48px; margin-bottom: 16px;"></i>
-                        <p>Posicione o código de barras na frente da câmera</p>
-                        <div class="scanner-animation"></div>
+                    <div id="barcode-scanner"></div>
+                    <div class="scanner-overlay"></div>
+                    <div class="scanner-placeholder" id="scanner-placeholder">
+                        <i class="fas fa-camera" style="font-size: 48px; margin-bottom: 16px;"></i>
+                        <p>Clique em "Ativar Câmera" para iniciar o leitor</p>
                     </div>
                 </div>
-                <button class="button" onclick="simulateScan()">Simular Leitura</button>
+                
+                <h4>Ou digite o código manualmente:</h4>
+                <div class="manual-input-container">
+                    <input type="text" id="barcode-input" class="manual-input" placeholder="Digite o código" onkeypress="handleBarcodeInput(event)">
+                    <button class="manual-button" onclick="processBarcode()">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="card">
-                <h3>Itens para Separar <span id="progress-text">(3/10)</span></h3>
+                <h3>Itens para Separar <span id="progress-text">(0/5)</span></h3>
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: 30%"></div>
+                    <div class="progress-fill" style="width: 0%"></div>
                 </div>
                 
                 <div class="filter-buttons">
@@ -713,77 +876,16 @@
                     <button class="filter-button" onclick="filterProducts('pending')">Pendentes</button>
                     <button class="filter-button" onclick="filterProducts('completed')">Concluídos</button>
                     <button class="filter-button" onclick="sortProducts('name')">Ordenar por Nome</button>
-                    <button class="filter-button" onclick="sortProducts('code')">Ordenar por Código</button>
+                    <button class="filter-button" onclick="sortProducts('quantity')">Ordenar por Quantidade</button>
                 </div>
                 
                 <div id="products-list">
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-pending"></div>
-                            <div>
-                                <strong>Produto A</strong>
-                                <p>Código: 123456</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto A', '123456')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-pending"></div>
-                            <div>
-                                <strong>Produto B</strong>
-                                <p>Código: 789012</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto B', '789012')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto C</strong>
-                                <p>Código: 345678</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto C', '345678')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto D</strong>
-                                <p>Código: 901234</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto D', '901234')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto E</strong>
-                                <p>Código: 567890</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto E', '567890')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
+                    <!-- Produtos serão carregados aqui -->
                 </div>
                 
-                <button class="button button-success" onclick="finishSeparation()">Finalizar Separação</button>
+                <button class="button button-success" id="finish-button" onclick="finishSeparation()" disabled>
+                    <i class="fas fa-check-circle"></i> Finalizar Separação
+                </button>
             </div>
         </div>
     </div>
@@ -1020,6 +1122,11 @@
                     <input type="text" id="barcode" placeholder="Digite o código de barras">
                 </div>
                 
+                <div class="input-group">
+                    <label for="quantity">Quantidade</label>
+                    <input type="number" id="quantity" placeholder="Quantidade" min="1" value="1">
+                </div>
+                
                 <button class="button button-success" onclick="addProduct()">
                     <i class="fas fa-plus"></i> Adicionar Produto
                 </button>
@@ -1033,7 +1140,7 @@
                         <i class="fas fa-file-csv"></i>
                     </div>
                     <h3>Arraste seu arquivo TXT ou CSV aqui</h3>
-                    <p>Formato: Nome, Código (um por linha)</p>
+                    <p>Formato: Nome, Código, Quantidade (um por linha)</p>
                     <button class="button button-small" onclick="document.getElementById('products-file').click()">
                         <i class="fas fa-upload"></i> Selecione um arquivo
                     </button>
@@ -1042,7 +1149,7 @@
                 
                 <div class="input-group">
                     <label for="products-content">Ou cole o conteúdo aqui:</label>
-                    <textarea id="products-content" rows="5" placeholder="Nome do Produto, 123456&#10;Outro Produto, 789012"></textarea>
+                    <textarea id="products-content" rows="5" placeholder="Nome do Produto, 123456, 30&#10;Outro Produto, 789012, 15"></textarea>
                 </div>
                 
                 <button class="button" onclick="importProducts()">
@@ -1054,6 +1161,25 @@
                 <h3>Produtos Cadastrados</h3>
                 <div id="products-container">
                     <!-- Os produtos cadastrados serão exibidos aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tela de Relatórios -->
+    <div id="relatorios" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Relatórios</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Processos Concluídos</h3>
+                <p>Visualize e exporte os relatórios de processos finalizados</p>
+                
+                <div id="reports-list">
+                    <!-- Relatórios serão carregados aqui -->
                 </div>
             </div>
         </div>
@@ -1103,36 +1229,35 @@
             </div>
             
             <button class="button button-success" onclick="closeReport()">OK</button>
+            <button class="button" onclick="exportReport()">
+                <i class="fas fa-download"></i> Exportar como TXT
+            </button>
         </div>
     </div>
 
     <!-- Footer Navigation -->
     <div class="footer">
-        <button class="footer-button active" onclick="showScreen('main-screen')">
+        <button class="footer-button" onclick="showScreen('main-screen')">
             <i class="fas fa-home"></i>
             <span>Início</span>
         </button>
-        <button class="footer-button" onclick="showScreen('separacao-itens')">
+        <button class="footer-button" id="footer-itens" onclick="showScreen('separacao-itens')">
             <i class="fas fa-box"></i>
             <span>Itens</span>
         </button>
-        <button class="footer-button" onclick="showScreen('separacao-pedidos')">
+        <button class="footer-button" id="footer-pedidos" onclick="showScreen('separacao-pedidos')">
             <i class="fas fa-clipboard-list"></i>
             <span>Pedidos</span>
         </button>
-        <button class="footer-button" onclick="showScreen('confecao-pedidos')">
+        <button class="footer-button" id="footer-confecao" onclick="showScreen('confecao-pedidos')">
             <i class="fas fa-tasks"></i>
             <span>Confecção</span>
         </button>
-        <button class="footer-button" onclick="showScreen('importacao-listas')">
+        <button class="footer-button" id="footer-importar" onclick="showScreen('importacao-listas')">
             <i class="fas fa-file-import"></i>
             <span>Importar</span>
         </button>
     </div>
-
-    <button id="installButton" class="install-button" style="display: none;">
-        <i class="fas fa-download"></i>
-    </button>
 
     <div class="notification" id="notification">
         <i class="notification-icon" id="notification-icon"></i>
@@ -1141,121 +1266,135 @@
 
     <script>
         // Variáveis globais
-        let selectedFile = null;
-        let products = [
-            { name: "Produto A", code: "123456", completed: false },
-            { name: "Produto B", code: "789012", completed: false },
-            { name: "Produto C", code: "345678", completed: true },
-            { name: "Produto D", code: "901234", completed: true },
-            { name: "Produto E", code: "567890", completed: true }
-        ];
-        
-        let registeredProducts = [
-            { name: "Produto A", code: "123456" },
-            { name: "Produto B", code: "789012" },
-            { name: "Produto C", code: "345678" },
-            { name: "Produto D", code: "901234" },
-            { name: "Produto E", code: "567890" },
-            { name: "Produto X", code: "111222" },
-            { name: "Produto Y", code: "333444" },
-            { name: "Produto Z", code: "555666" },
-            { name: "Produto W", code: "777888" },
-            { name: "Produto V", code: "999000" }
-        ];
-        
-        // Variáveis para controle de tempo
+        let operatorName = "";
+        let products = [];
+        let registeredProducts = [];
         let startTime = null;
         let endTime = null;
         let currentProcess = null;
-        
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js')
-                .then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(function(error) {
-                    console.log('ServiceWorker registration failed: ', error);
-                });
-            });
-        }
-        
-        // Before Install Prompt
-        let deferredPrompt;
-        const installButton = document.getElementById('installButton');
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installButton.style.display = 'flex';
-            
-            installButton.addEventListener('click', () => {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
-                    }
-                    deferredPrompt = null;
-                });
-            });
-        });
-        
+        let activeProcess = null;
+        let selectedFile = null;
+        let completedReports = [];
+        let lastScannedCode = null;
+        let lastScanTime = null;
+        let isScannerActive = false;
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            initDragAndDrop();
-            loadSavedLists();
-            updateProcessButton();
-            loadRegisteredProducts();
+            // Verificar se já tem operador definido
+            const savedOperator = localStorage.getItem('operatorName');
+            if (savedOperator) {
+                operatorName = savedOperator;
+                showScreen('main-screen');
+            } else {
+                // Mostrar modal para inserir nome
+                document.getElementById('operatorModal').style.display = 'flex';
+            }
             
+            // Carregar dados
+            loadSampleProducts();
+            renderProductsList();
+            loadSavedLists();
+            loadRegisteredProducts();
+            loadReports();
+            
+            // Configurar foco no campo de código de barras
+            const barcodeInput = document.getElementById('barcode-input');
+            if (barcodeInput) {
+                barcodeInput.focus();
+            }
+            
+            // Adicionar event listeners para os inputs
             document.getElementById('list-name').addEventListener('input', updateProcessButton);
             document.getElementById('list-file').addEventListener('change', handleFileSelect);
             document.getElementById('products-file').addEventListener('change', handleProductsFileSelect);
             
-            // Carregar nome do operador se existir
-            const operatorName = localStorage.getItem('operatorName');
-            if (operatorName) {
-                document.getElementById('operator-name').value = operatorName;
-            }
+            // Inicializar drag and drop
+            initDragAndDrop();
         });
         
-        // Funções principais de navegação
+        // Definir operador
+        function setOperator() {
+            const nameInput = document.getElementById('operator-name');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showNotification('Por favor, informe seu nome.', 'error');
+                return;
+            }
+            
+            operatorName = name;
+            localStorage.setItem('operatorName', name);
+            document.getElementById('operatorModal').style.display = 'none';
+            showScreen('main-screen');
+            
+            showNotification(`Bem-vindo, ${name}!`, 'success');
+        }
+        
+        // Carregar produtos de exemplo
+        function loadSampleProducts() {
+            products = [
+                { name: "Produto A", code: "123456", quantity: 30, completed: false },
+                { name: "Produto B", code: "789012", quantity: 15, completed: false },
+                { name: "Produto C", code: "345678", quantity: 45, completed: false },
+                { name: "Produto D", code: "901234", quantity: 20, completed: false },
+                { name: "Produto E", code: "567890", quantity: 10, completed: false }
+            ];
+            
+            // Carregar produtos registrados do localStorage ou usar padrão
+            const savedProducts = localStorage.getItem('registeredProducts');
+            if (savedProducts) {
+                registeredProducts = JSON.parse(savedProducts);
+            } else {
+                registeredProducts = [
+                    { name: "Produto A", code: "123456", quantity: 30 },
+                    { name: "Produto B", code: "789012", quantity: 15 },
+                    { name: "Produto C", code: "345678", quantity: 45 },
+                    { name: "Produto D", code: "901234", quantity: 20 },
+                    { name: "Produto E", code: "567890", quantity: 10 },
+                    { name: "Produto X", code: "111222", quantity: 25 },
+                    { name: "Produto Y", code: "333444", quantity: 35 },
+                    { name: "Produto Z", code: "555666", quantity: 5 },
+                    { name: "Produto W", code: "777888", quantity: 50 },
+                    { name: "Produto V", code: "999000", quantity: 12 }
+                ];
+                saveRegisteredProducts();
+            }
+        }
+        
+        // Funções de navegação
         function showScreen(screenId) {
+            // Se já tem um processo ativo e tenta navegar para outra tela
+            if (activeProcess && screenId !== activeProcess && screenId !== 'main-screen') {
+                showNotification('Finalize o processo atual antes de navegar para outras seções.', 'error');
+                return;
+            }
+            
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.remove('active');
             });
             
             document.getElementById(screenId).classList.add('active');
             
+            // Atualizar footer buttons
             document.querySelectorAll('.footer-button').forEach(button => {
                 button.classList.remove('active');
             });
             
             if (screenId === 'main-screen') {
                 document.querySelector('.footer-button:nth-child(1)').classList.add('active');
+                activeProcess = null;
+                enableNavigation();
             } else if (screenId === 'separacao-itens') {
-                document.querySelector('.footer-button:nth-child(2)').classList.add('active');
-                renderProductsList();
-                if (!startTime) {
-                    startTime = new Date();
-                    currentProcess = 'separacao';
-                    showNotification("Separação iniciada. Tempo começou a ser contado.", "success");
-                }
+                document.getElementById('footer-itens').classList.add('active');
             } else if (screenId === 'separacao-pedidos') {
-                document.querySelector('.footer-button:nth-child(3)').classList.add('active');
+                document.getElementById('footer-pedidos').classList.add('active');
             } else if (screenId === 'confecao-pedidos') {
-                document.querySelector('.footer-button:nth-child(4)').classList.add('active');
-                if (!startTime) {
-                    startTime = new Date();
-                    currentProcess = 'confecao';
-                    showNotification("Confecção iniciada. Tempo começou a ser contado.", "success");
-                }
+                document.getElementById('footer-confecao').classList.add('active');
             } else if (screenId === 'importacao-listas') {
-                document.querySelector('.footer-button:nth-child(5)').classList.add('active');
-            } else if (screenId === 'adicionar-produto') {
-                // Não há botão no footer para esta tela
+                document.getElementById('footer-importar').classList.add('active');
+            } else if (screenId === 'relatorios') {
+                loadReports();
             }
         }
         
@@ -1272,15 +1411,259 @@
             event.target.classList.add('active');
         }
         
-        // Funções de simulação
-        function simulateScan() {
-            const randomProduct = registeredProducts[Math.floor(Math.random() * registeredProducts.length)];
-            alert(`Código de barras lido: ${randomProduct.code}\nProduto: ${randomProduct.name}\nMarcação realizada com sucesso!`);
-            markProductAsScanned(randomProduct.code);
+        // Iniciar separação de itens
+        function startSeparation() {
+            showScreen('separacao-itens');
+            
+            // Focar no campo de código de barras
+            setTimeout(() => {
+                const barcodeInput = document.getElementById('barcode-input');
+                if (barcodeInput) {
+                    barcodeInput.focus();
+                }
+            }, 100);
         }
         
+        // Cancelar separação
+        function cancelSeparation() {
+            if (confirm('Deseja cancelar a separação? Todo o progresso será perdido.')) {
+                // Parar o scanner se estiver ativo
+                if (isScannerActive) {
+                    stopBarcodeScanner();
+                }
+                
+                activeProcess = null;
+                enableNavigation();
+                resetSeparation();
+                showScreen('main-screen');
+            }
+        }
+        
+        // Desativar navegação
+        function disableNavigation() {
+            activeProcess = 'separacao-itens';
+            
+            document.querySelectorAll('.footer-button:not(#footer-itens)').forEach(button => {
+                button.disabled = true;
+            });
+            
+            document.querySelectorAll('.menu-item:not([onclick*="separacao-itens"])').forEach(item => {
+                item.style.opacity = '0.5';
+                item.style.cursor = 'not-allowed';
+                const originalOnClick = item.getAttribute('onclick');
+                item.setAttribute('data-original-onclick', originalOnClick);
+                item.removeAttribute('onclick');
+            });
+        }
+        
+        // Ativar navegação
+        function enableNavigation() {
+            document.querySelectorAll('.footer-button').forEach(button => {
+                button.disabled = false;
+            });
+            
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.style.opacity = '1';
+                item.style.cursor = 'pointer';
+                const originalOnClick = item.getAttribute('data-original-onclick');
+                if (originalOnClick) {
+                    item.setAttribute('onclick', originalOnClick);
+                }
+            });
+        }
+        
+        // Resetar separação
+        function resetSeparation() {
+            products.forEach(product => {
+                product.completed = false;
+            });
+            startTime = null;
+            renderProductsList();
+        }
+        
+        // Inicializar o leitor de código de barras
+        function initBarcodeScanner() {
+            if (isScannerActive) return;
+            
+            const scannerPlaceholder = document.getElementById('scanner-placeholder');
+            if (scannerPlaceholder) {
+                scannerPlaceholder.style.display = 'none';
+            }
+            
+            // Verificar se o navegador suporta acesso à câmera
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showNotification('Seu navegador não suporta acesso à câmera.', 'error');
+                return;
+            }
+            
+            // Solicitar permissão para acessar a câmera
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function(stream) {
+                isScannerActive = true;
+                const video = document.createElement('video');
+                video.id = 'barcode-scanner-video';
+                video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.play();
+                
+                const scannerContainer = document.querySelector('.scanner-container');
+                const existingVideo = document.getElementById('barcode-scanner-video');
+                if (existingVideo) {
+                    scannerContainer.removeChild(existingVideo);
+                }
+                scannerContainer.appendChild(video);
+                
+                // Atualizar controles
+                document.getElementById('start-scanner').classList.add('inactive');
+                document.getElementById('stop-scanner').classList.remove('inactive');
+                
+                // Iniciar a detecção de código de barras
+                startBarcodeDetection(video);
+            })
+            .catch(function(error) {
+                console.error('Erro ao acessar a câmera:', error);
+                showNotification('Não foi possível acessar a câmera. Verifique as permissões.', 'error');
+                
+                if (scannerPlaceholder) {
+                    scannerPlaceholder.style.display = 'flex';
+                }
+            });
+        }
+        
+        // Parar o leitor de código de barras
+        function stopBarcodeScanner() {
+            if (!isScannerActive) return;
+            
+            const video = document.getElementById('barcode-scanner-video');
+            if (video && video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+                
+                if (video.parentNode) {
+                    video.parentNode.removeChild(video);
+                }
+            }
+            
+            isScannerActive = false;
+            
+            // Mostrar placeholder
+            const scannerPlaceholder = document.getElementById('scanner-placeholder');
+            if (scannerPlaceholder) {
+                scannerPlaceholder.style.display = 'flex';
+            }
+            
+            // Atualizar controles
+            document.getElementById('start-scanner').classList.remove('inactive');
+            document.getElementById('stop-scanner').classList.add('inactive');
+            
+            showNotification('Leitor de código de barras desativado.', 'success');
+        }
+        
+        // Iniciar detecção de código de barras
+        function startBarcodeDetection(video) {
+            // Usando QuaggaJS para detecção de código de barras
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: video,
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    }
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error('Erro ao inicializar Quagga:', err);
+                    showNotification('Erro ao inicializar leitor de código de barras.', 'error');
+                    return;
+                }
+                
+                Quagga.start();
+                showNotification('Leitor de código de barras ativado. Aponte para um código.', 'success');
+            });
+            
+            // Detectar códigos de barras
+            Quagga.onDetected(function(result) {
+                const code = result.codeResult.code;
+                const currentTime = new Date().getTime();
+                
+                // Prevenir leituras múltiplas do mesmo código em um curto período
+                if (lastScannedCode === code && lastScanTime && (currentTime - lastScanTime) < 1000) {
+                    return; // Ignorar leituras muito rápidas do mesmo código
+                }
+                
+                lastScannedCode = code;
+                lastScanTime = currentTime;
+                
+                // Processar o código
+                processScannedBarcode(code);
+            });
+        }
+        
+        // Processar código escaneado
+        function processScannedBarcode(code) {
+            // Se é o primeiro código, iniciar temporizador e desativar navegação
+            if (!startTime) {
+                startTime = new Date();
+                disableNavigation();
+                showNotification('Separação iniciada. Tempo começou a ser contado.', 'success');
+            }
+            
+            // Processar o código
+            markProductAsScanned(code);
+            
+            // Feedback visual
+            const overlay = document.querySelector('.scanner-overlay');
+            if (overlay) {
+                overlay.style.borderColor = '#10b981';
+                setTimeout(() => {
+                    overlay.style.borderColor = '#2563eb';
+                }, 300);
+            }
+        }
+        
+        // Processar código de barras manual
+        function processBarcode() {
+            const barcodeInput = document.getElementById('barcode-input');
+            const code = barcodeInput.value.trim();
+            
+            if (!code) {
+                showNotification('Por favor, digite um código.', 'error');
+                return;
+            }
+            
+            // Se é o primeiro código, iniciar temporizador e desativar navegação
+            if (!startTime) {
+                startTime = new Date();
+                disableNavigation();
+                showNotification('Separação iniciada. Tempo começou a ser contado.', 'success');
+            }
+            
+            // Processar o código
+            markProductAsScanned(code);
+            
+            // Limpar campo
+            barcodeInput.value = '';
+            barcodeInput.focus();
+        }
+        
+        // Processar código ao pressionar Enter
+        function handleBarcodeInput(event) {
+            if (event.key === 'Enter') {
+                processBarcode();
+            }
+        }
+        
+        // Marcar produto como escaneado
         function markProductAsScanned(code) {
             const productIndex = products.findIndex(p => p.code === code);
+            
             if (productIndex !== -1) {
                 products[productIndex].completed = true;
                 renderProductsList();
@@ -1291,32 +1674,270 @@
                     products.push({
                         name: registeredProduct.name,
                         code: registeredProduct.code,
+                        quantity: registeredProduct.quantity,
                         completed: true
                     });
                     renderProductsList();
                     showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
                 } else {
-                    showNotification(`Código ${code} não encontrado na base de produtos.`, 'error');
+                    showNotification(`Código ${code} não encontrado. Verifique o código.`, 'error');
                 }
             }
         }
         
-        function markAsScanned(productName, productCode) {
-            const productIndex = products.findIndex(p => p.code === productCode);
+        // Renderizar lista de produtos
+        function renderProductsList() {
+            const productsList = document.getElementById('products-list');
+            const pendingCount = products.filter(p => !p.completed).length;
+            const totalCount = products.length;
+            const completedCount = totalCount - pendingCount;
+            
+            // Atualizar texto de progresso
+            document.getElementById('progress-text').textContent = `(${completedCount}/${totalCount})`;
+            
+            // Atualizar barra de progresso
+            const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+            document.querySelector('.progress-fill').style.width = `${progressPercent}%`;
+            
+            // Atualizar botão de finalizar
+            const finishButton = document.getElementById('finish-button');
+            finishButton.disabled = pendingCount > 0;
+            
+            // Renderizar lista de produtos
+            productsList.innerHTML = products.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Alternar status do produto
+        function toggleProduct(code) {
+            const productIndex = products.findIndex(p => p.code === code);
             if (productIndex !== -1) {
                 products[productIndex].completed = !products[productIndex].completed;
                 renderProductsList();
                 
                 const status = products[productIndex].completed ? "marcado como separado" : "marcado como pendente";
-                showNotification(`Produto "${productName}" ${status}!`, 'success');
+                showNotification(`Produto "${products[productIndex].name}" ${status}!`, 'success');
             }
         }
         
+        // Finalizar separação
+        function finishSeparation() {
+            const pendingCount = products.filter(p => !p.completed).length;
+            
+            if (pendingCount > 0) {
+                showNotification('Não é possível finalizar. Existem itens pendentes.', 'error');
+                return;
+            }
+            
+            // Parar o scanner se estiver ativo
+            if (isScannerActive) {
+                stopBarcodeScanner();
+            }
+            
+            endTime = new Date();
+            saveReport();
+            showReport();
+        }
+        
+        // Salvar relatório
+        function saveReport() {
+            const timeDiff = endTime - startTime;
+            const seconds = Math.floor(timeDiff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            const completedItems = products.filter(p => p.completed).length;
+            const totalItems = products.length;
+            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+            
+            const report = {
+                id: Date.now(),
+                operator: operatorName,
+                date: new Date().toLocaleDateString('pt-BR'),
+                startTime: startTime.toLocaleTimeString('pt-BR'),
+                endTime: endTime.toLocaleTimeString('pt-BR'),
+                duration: `${minutes}min ${remainingSeconds}s`,
+                itemsProcessed: `${completedItems}/${totalItems}`,
+                efficiency: `${efficiency}%`,
+                products: products.filter(p => p.completed)
+            };
+            
+            // Carregar relatórios existentes
+            const savedReports = JSON.parse(localStorage.getItem('completedReports') || '[]');
+            savedReports.push(report);
+            localStorage.setItem('completedReports', JSON.stringify(savedReports));
+            
+            completedReports = savedReports;
+        }
+        
+        // Carregar relatórios
+        function loadReports() {
+            const reportsList = document.getElementById('reports-list');
+            if (!reportsList) return;
+            
+            const savedReports = JSON.parse(localStorage.getItem('completedReports') || '[]');
+            completedReports = savedReports;
+            
+            if (savedReports.length === 0) {
+                reportsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h3>Nenhum relatório disponível</h3>
+                        <p>Finalize processos para gerar relatórios</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Ordenar relatórios por data (mais recente primeiro)
+            savedReports.sort((a, b) => b.id - a.id);
+            
+            reportsList.innerHTML = savedReports.map(report => `
+                <div class="list-item">
+                    <div class="file-info">
+                        <div class="file-name">Processo #${report.id}</div>
+                        <div class="file-details">
+                            ${report.date} • ${report.duration} • ${report.itemsProcessed} itens
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn btn-view" onclick="viewReport(${report.id})">
+                            <i class="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button class="action-btn btn-export" onclick="exportSingleReport(${report.id})">
+                            <i class="fas fa-download"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Visualizar relatório
+        function viewReport(reportId) {
+            const report = completedReports.find(r => r.id === reportId);
+            if (!report) return;
+            
+            document.getElementById('report-responsavel').textContent = report.operator;
+            document.getElementById('report-data').textContent = report.date;
+            document.getElementById('report-inicio').textContent = report.startTime;
+            document.getElementById('report-termino').textContent = report.endTime;
+            document.getElementById('report-tempo').textContent = report.duration;
+            document.getElementById('report-itens').textContent = report.itemsProcessed;
+            document.getElementById('report-eficiencia').textContent = report.efficiency;
+            
+            // Salvar o ID do relatório atual para exportação
+            document.getElementById('reportModal').setAttribute('data-current-report', reportId);
+            
+            document.getElementById('reportModal').style.display = 'flex';
+        }
+        
+        // Exportar relatório individual
+        function exportSingleReport(reportId) {
+            const report = completedReports.find(r => r.id === reportId);
+            if (!report) return;
+            
+            exportReportData(report);
+        }
+        
+        // Exportar relatório (do modal)
+        function exportReport() {
+            const reportId = parseInt(document.getElementById('reportModal').getAttribute('data-current-report'));
+            const report = completedReports.find(r => r.id === reportId);
+            if (!report) return;
+            
+            exportReportData(report);
+        }
+        
+        // Gerar dados para exportação
+        function exportReportData(report) {
+            let reportText = `RELATÓRIO DE SEPARAÇÃO - Processo #${report.id}\n`;
+            reportText += `============================================\n\n`;
+            reportText += `Responsável: ${report.operator}\n`;
+            reportText += `Data: ${report.date}\n`;
+            reportText += `Hora de Início: ${report.startTime}\n`;
+            reportText += `Hora de Término: ${report.endTime}\n`;
+            reportText += `Tempo Total: ${report.duration}\n`;
+            reportText += `Itens Processados: ${report.itemsProcessed}\n`;
+            reportText += `Eficiência: ${report.efficiency}\n\n`;
+            reportText += `ITENS SEPARADOS:\n`;
+            reportText += `============================================\n`;
+            
+            report.products.forEach(product => {
+                reportText += `${product.name} (Código: ${product.code}) - Quantidade: x${product.quantity}\n`;
+            });
+            
+            // Criar arquivo para download
+            const blob = new Blob([reportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio-separacao-${report.id}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Relatório exportado com sucesso!', 'success');
+        }
+        
+        // Fechar relatório
+        function closeReport() {
+            document.getElementById('reportModal').style.display = 'none';
+            activeProcess = null;
+            enableNavigation();
+            resetSeparation();
+            showScreen('main-screen');
+        }
+        
+        // Mostrar relatório
+        function showReport() {
+            const timeDiff = endTime - startTime;
+            const seconds = Math.floor(timeDiff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            const completedItems = products.filter(p => p.completed).length;
+            const totalItems = products.length;
+            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+            
+            document.getElementById('report-responsavel').textContent = operatorName;
+            document.getElementById('report-data').textContent = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('report-inicio').textContent = startTime.toLocaleTimeString('pt-BR');
+            document.getElementById('report-termino').textContent = endTime.toLocaleTimeString('pt-BR');
+            document.getElementById('report-tempo').textContent = `${minutes}min ${remainingSeconds}s`;
+            document.getElementById('report-itens').textContent = `${completedItems}/${totalItems}`;
+            document.getElementById('report-eficiencia').textContent = `${efficiency}%`;
+            
+            // Salvar o ID do relatório atual para exportação
+            const reportId = Date.now();
+            document.getElementById('reportModal').setAttribute('data-current-report', reportId);
+            
+            document.getElementById('reportModal').style.display = 'flex';
+        }
+        
+        // Funções para Separação de Pedidos
         function startNewOrder() {
             alert('Iniciando novo pedido...');
             showScreen('confecao-pedidos');
         }
         
+        // Funções para Confecção de Pedidos
         function checkProduct() {
             const code = document.getElementById('product-code').value;
             if (code) {
@@ -1333,47 +1954,7 @@
         }
         
         function finishOrder() {
-            endTime = new Date();
-            showReport();
-        }
-        
-        function finishSeparation() {
-            endTime = new Date();
-            showReport();
-        }
-        
-        function showReport() {
-            const timeDiff = endTime - startTime;
-            const seconds = Math.floor(timeDiff / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            
-            const completedItems = products.filter(p => p.completed).length;
-            const totalItems = products.length;
-            const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-            
-            const operatorName = localStorage.getItem('operatorName') || 'Operador';
-            
-            document.getElementById('report-responsavel').textContent = operatorName;
-            document.getElementById('report-data').textContent = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('report-inicio').textContent = startTime.toLocaleTimeString('pt-BR');
-            document.getElementById('report-termino').textContent = endTime.toLocaleTimeString('pt-BR');
-            document.getElementById('report-tempo').textContent = `${minutes}min ${remainingSeconds}s`;
-            document.getElementById('report-itens').textContent = `${completedItems}/${totalItems}`;
-            document.getElementById('report-eficiencia').textContent = `${efficiency}%`;
-            
-            document.getElementById('reportModal').style.display = 'flex';
-        }
-        
-        function closeReport() {
-            document.getElementById('reportModal').style.display = 'none';
-            startTime = null;
-            endTime = null;
-            currentProcess = null;
-            
-            // Resetar produtos para o estado inicial
-            products.forEach(p => p.completed = false);
-            renderProductsList();
+            alert('Pedido finalizado com sucesso! Relatório gerado.');
         }
         
         // Configurar área de drag and drop
@@ -1381,6 +1962,7 @@
             const uploadArea = document.getElementById('uploadArea');
             const importProductsArea = document.getElementById('importProductsArea');
             
+            // Para upload de listas
             uploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
@@ -1399,23 +1981,26 @@
                 }
             });
             
-            importProductsArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                importProductsArea.classList.add('dragover');
-            });
-            
-            importProductsArea.addEventListener('dragleave', function() {
-                importProductsArea.classList.remove('dragover');
-            });
-            
-            importProductsArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                importProductsArea.classList.remove('dragover');
+            // Para importação de produtos
+            if (importProductsArea) {
+                importProductsArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    importProductsArea.classList.add('dragover');
+                });
                 
-                if (e.dataTransfer.files.length) {
-                    handleProductsFiles(e.dataTransfer.files);
-                }
-            });
+                importProductsArea.addEventListener('dragleave', function() {
+                    importProductsArea.classList.remove('dragover');
+                });
+                
+                importProductsArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    importProductsArea.classList.remove('dragover');
+                    
+                    if (e.dataTransfer.files.length) {
+                        handleProductsFiles(e.dataTransfer.files);
+                    }
+                });
+            }
         }
         
         // Manipular seleção de arquivo via input
@@ -1439,6 +2024,7 @@
             
             const file = files[0];
             
+            // Verificar se é PDF
             if (file.type !== 'application/pdf') {
                 showNotification('Por favor, selecione um arquivo PDF.', 'error');
                 return;
@@ -1446,9 +2032,11 @@
             
             selectedFile = file;
             
+            // Atualizar interface
             document.getElementById('list-name').value = file.name.replace('.pdf', '');
             updateProcessButton();
             
+            // Mostrar preview
             showNotification(`Arquivo "${file.name}" selecionado com sucesso.`, 'success');
         }
         
@@ -1457,6 +2045,7 @@
             
             const file = files[0];
             
+            // Verificar se é texto
             if (file.type !== 'text/plain' && !file.name.endsWith('.csv')) {
                 showNotification('Por favor, selecione um arquivo TXT ou CSV.', 'error');
                 return;
@@ -1567,42 +2156,46 @@
             const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
             
             if (savedLists.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="far fa-folder-open"></i>
+                if (listContainer) {
+                    listContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="far fa-folder-open"></i>
+                            </div>
+                            <h3>Nenhuma lista importada</h3>
+                            <p>Faça upload de uma lista PDF para começar</p>
                         </div>
-                        <h3>Nenhuma lista importada</h3>
-                        <p>Faça upload de uma lista PDF para começar</p>
-                    </div>
-                `;
+                    `;
+                }
                 return;
             }
             
-            listContainer.innerHTML = savedLists.map(list => `
-                <div class="file-item">
-                    <div class="file-info">
-                        <div class="file-name">${list.name}</div>
-                        <div class="file-details">
-                            ${formatDate(list.date)} • 
-                            ${list.items.length} itens • 
-                            ${getListTypeName(list.type)}
+            if (listContainer) {
+                listContainer.innerHTML = savedLists.map(list => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${list.name}</div>
+                            <div class="file-details">
+                                ${formatDate(list.date)} • 
+                                ${list.items.length} itens • 
+                                ${getListTypeName(list.type)}
+                            </div>
+                            <span class="status-badge status-success">Processado</span>
                         </div>
-                        <span class="status-badge status-success">Processado</span>
+                        <div class="file-actions">
+                            <button class="action-btn btn-view" onclick="viewList(${list.id})">
+                                <i class="fas fa-eye"></i> Visualizar
+                            </button>
+                            <button class="action-btn btn-edit" onclick="editList(${list.id})">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="action-btn btn-delete" onclick="deleteList(${list.id})">
+                                <i class="fas fa-trash"></i> Excluir
+                            </button>
+                        </div>
                     </div>
-                    <div class="file-actions">
-                        <button class="action-btn btn-view" onclick="viewList(${list.id})">
-                            <i class="fas fa-eye"></i> Visualizar
-                        </button>
-                        <button class="action-btn btn-edit" onclick="editList(${list.id})">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="action-btn btn-delete" onclick="deleteList(${list.id})">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
         
         // Visualizar lista
@@ -1655,66 +2248,31 @@
             selectedFile = null;
         }
         
-        // Mostrar notificação
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notification-icon');
-            const text = document.getElementById('notification-text');
-            
-            notification.className = 'notification';
-            if (type === 'success') {
-                notification.classList.add('notification-success');
-                icon.className = 'notification-icon fas fa-check-circle';
-            } else {
-                notification.classList.add('notification-error');
-                icon.className = 'notification-icon fas fa-exclamation-circle';
-            }
-            
-            text.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Helper: Formatar data
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('pt-BR');
-        }
-        
-        // Helper: Obter nome do tipo de lista
-        function getListTypeName(type) {
-            const types = {
-                'separacao': 'Separação de Itens',
-                'pedidos': 'Separação de Pedidos',
-                'confecao': 'Confecção de Pedidos'
-            };
-            
-            return types[type] || 'Desconhecido';
-        }
-        
         // Funções para a tela de adicionar produto
         function addProduct() {
             const name = document.getElementById('product-name').value.trim();
             const code = document.getElementById('barcode').value.trim();
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
             
             if (!name || !code) {
                 showNotification('Por favor, preencha todos os campos.', 'error');
                 return;
             }
             
+            // Verificar se o código já existe
             if (registeredProducts.some(p => p.code === code)) {
                 showNotification('Já existe um produto com este código.', 'error');
                 return;
             }
             
-            registeredProducts.push({ name, code });
+            // Adicionar produto
+            registeredProducts.push({ name, code, quantity });
             saveRegisteredProducts();
             
+            // Limpar formulário
             document.getElementById('product-name').value = '';
             document.getElementById('barcode').value = '';
+            document.getElementById('quantity').value = '1';
             
             showNotification(`Produto "${name}" adicionado com sucesso!`, 'success');
             loadRegisteredProducts();
@@ -1733,11 +2291,14 @@
             let skippedCount = 0;
             
             for (const line of lines) {
-                const [name, code] = line.split(',').map(item => item.trim());
+                const [name, code, quantity] = line.split(',').map(item => item.trim());
                 
                 if (name && code) {
+                    const qty = parseInt(quantity) || 1;
+                    
+                    // Verificar se o código já existe
                     if (!registeredProducts.some(p => p.code === code)) {
-                        registeredProducts.push({ name, code });
+                        registeredProducts.push({ name, code, quantity: qty });
                         importedCount++;
                     } else {
                         skippedCount++;
@@ -1768,6 +2329,7 @@
             }
             
             const productsContainer = document.getElementById('products-container');
+            if (!productsContainer) return;
             
             if (registeredProducts.length === 0) {
                 productsContainer.innerHTML = `
@@ -1786,11 +2348,13 @@
                 <div class="list-item">
                     <div class="file-info">
                         <div class="file-name">${product.name}</div>
-                        <div class="file-details">Código: ${product.code}</div>
+                        <div class="file-details">Código: ${product.code} • Quantidade: x${product.quantity}</div>
                     </div>
-                    <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
-                        <i class="fas fa-trash"></i> Excluir
-                    </button>
+                    <div class="file-actions">
+                        <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -1804,33 +2368,7 @@
             }
         }
         
-        // Funções para a tela de separação de itens
-        function renderProductsList() {
-            const productsList = document.getElementById('products-list');
-            const pendingCount = products.filter(p => !p.completed).length;
-            const totalCount = products.length;
-            
-            document.getElementById('progress-text').textContent = `(${totalCount - pendingCount}/${totalCount})`;
-            document.querySelector('.progress-fill').style.width = `${((totalCount - pendingCount) / totalCount) * 100}%`;
-            
-            productsList.innerHTML = products.map(product => `
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
-                        <div>
-                            <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
-                        </div>
-                    </div>
-                    <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
+        // Funções de filtro e ordenação
         function filterProducts(filter) {
             document.querySelectorAll('.filter-button').forEach(button => {
                 button.classList.remove('active');
@@ -1854,12 +2392,12 @@
                         <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
+                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
                     </div>
                 </div>
@@ -1878,8 +2416,8 @@
             
             if (criteria === 'name') {
                 sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-            } else if (criteria === 'code') {
-                sortedProducts.sort((a, b) => a.code.localeCompare(b.code));
+            } else if (criteria === 'quantity') {
+                sortedProducts.sort((a, b) => b.quantity - a.quantity);
             }
             
             const productsList = document.getElementById('products-list');
@@ -1889,27 +2427,56 @@
                         <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
                         <div>
                             <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
+                            <p>Código: ${product.code} <span class="quantity-badge">x${product.quantity}</span></p>
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
         }
         
-        // Configurar operador
-        function setOperator() {
-            const operatorName = document.getElementById('operator-name').value.trim();
-            if (operatorName) {
-                localStorage.setItem('operatorName', operatorName);
-                showNotification(`Operador definido: ${operatorName}`, 'success');
+        // Helper: Formatar data
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        // Helper: Obter nome do tipo de lista
+        function getListTypeName(type) {
+            const types = {
+                'separacao': 'Separação de Itens',
+                'pedidos': 'Separação de Pedidos',
+                'confecao': 'Confecção de Pedidos'
+            };
+            
+            return types[type] || 'Desconhecido';
+        }
+        
+        // Mostrar notificação
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notification-icon');
+            const text = document.getElementById('notification-text');
+            
+            notification.className = 'notification';
+            if (type === 'success') {
+                notification.classList.add('notification-success');
+                icon.className = 'notification-icon fas fa-check-circle';
             } else {
-                showNotification('Por favor, informe o nome do operador.', 'error');
+                notification.classList.add('notification-error');
+                icon.className = 'notification-icon fas fa-exclamation-circle';
             }
+            
+            text.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
     </script>
 </body>
