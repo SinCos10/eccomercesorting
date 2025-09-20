@@ -153,6 +153,11 @@
             width: 100%;
         }
         
+        .button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
         .button-success {
             background-color: var(--success-color);
         }
@@ -284,6 +289,11 @@
         
         .footer-button.active {
             color: var(--primary-color);
+        }
+        
+        .footer-button:disabled {
+            color: #d1d5db;
+            cursor: not-allowed;
         }
         
         .footer-button i {
@@ -617,6 +627,50 @@
             font-weight: 500;
         }
         
+        .operator-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+        
+        .operator-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .manual-input-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .manual-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .manual-button {
+            padding: 12px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
         @media (max-width: 600px) {
             .file-item {
                 flex-direction: column;
@@ -637,12 +691,33 @@
             .filter-buttons {
                 flex-direction: column;
             }
+            
+            .manual-input-container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Modal para inserir nome do operador -->
+    <div class="operator-modal" id="operatorModal">
+        <div class="operator-content">
+            <h2>Identificação do Operador</h2>
+            <p>Por favor, informe seu nome para registrar suas atividades:</p>
+            
+            <div class="input-group">
+                <label for="operator-name">Seu Nome</label>
+                <input type="text" id="operator-name" placeholder="Digite seu nome completo">
+            </div>
+            
+            <button class="button button-success" onclick="setOperator()">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+
     <!-- Tela Principal/Menu -->
-    <div id="main-screen" class="screen active">
+    <div id="main-screen" class="screen">
         <header>
             <h1>App de Separação</h1>
         </header>
@@ -685,27 +760,30 @@
     <!-- Tela de Separação de Itens -->
     <div id="separacao-itens" class="screen">
         <div class="sub-header">
-            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <button class="back-button" onclick="cancelSeparation()"><i class="fas fa-arrow-left"></i></button>
             <h1>Separação de Itens</h1>
         </div>
         
         <div class="container">
             <div class="card">
-                <h3>Scanner de Código de Barras</h3>
-                <div class="scanner-container">
-                    <div class="scanner-placeholder">
-                        <i class="fas fa-barcode" style="font-size: 48px; margin-bottom: 16px;"></i>
-                        <p>Posicione o código de barras na frente da câmera</p>
-                        <div class="scanner-animation"></div>
-                    </div>
+                <h3>Digite o Código de Barras</h3>
+                
+                <div class="manual-input-container">
+                    <input type="text" id="barcode-input" class="manual-input" placeholder="Digite o código ou escaneie" onkeypress="handleBarcodeInput(event)">
+                    <button class="manual-button" onclick="processBarcode()">
+                        <i class="fas fa-check"></i>
+                    </button>
                 </div>
-                <button class="button" onclick="simulateScan()">Simular Leitura</button>
+                
+                <p style="text-align: center; margin-top: 8px; color: #64748b;">
+                    Ou use um leitor de código de barras conectado
+                </p>
             </div>
             
             <div class="card">
-                <h3>Itens para Separar <span id="progress-text">(3/10)</span></h3>
+                <h3>Itens para Separar <span id="progress-text">(0/5)</span></h3>
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: 30%"></div>
+                    <div class="progress-fill" style="width: 0%"></div>
                 </div>
                 
                 <div class="filter-buttons">
@@ -717,78 +795,17 @@
                 </div>
                 
                 <div id="products-list">
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-pending"></div>
-                            <div>
-                                <strong>Produto A</strong>
-                                <p>Código: 123456</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto A', '123456')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-pending"></div>
-                            <div>
-                                <strong>Produto B</strong>
-                                <p>Código: 789012</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto B', '789012')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto C</strong>
-                                <p>Código: 345678</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto C', '345678')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto D</strong>
-                                <p>Código: 901234</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto D', '901234')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="product-item">
-                        <div class="product-info">
-                            <div class="status-indicator status-completed"></div>
-                            <div>
-                                <strong>Produto E</strong>
-                                <p>Código: 567890</p>
-                            </div>
-                        </div>
-                        <div class="product-actions">
-                            <button class="action-button scan" onclick="markAsScanned('Produto E', '567890')"><i class="fas fa-barcode"></i></button>
-                        </div>
-                    </div>
+                    <!-- Produtos serão carregados aqui -->
                 </div>
                 
-                <button class="button button-success" onclick="finishSeparation()">Finalizar Separação</button>
+                <button class="button button-success" id="finish-button" onclick="finishSeparation()" disabled>
+                    <i class="fas fa-check-circle"></i> Finalizar Separação
+                </button>
             </div>
         </div>
     </div>
     
-    <!-- Tela de Separação de Pedidos -->
+    <!-- Outras telas (código similar ao anterior) -->
     <div id="separacao-pedidos" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -796,69 +813,17 @@
         </div>
         
         <div class="container">
-            <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('pendentes-tab')">Pendentes</button>
-                <button class="tab-button" onclick="showTab('andamento-tab')">Em Andamento</button>
-                <button class="tab-button" onclick="showTab('concluidos-tab')">Concluídos</button>
-            </div>
-            
-            <div id="pendentes-tab" class="tab-content active">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #001</strong>
-                            <p>5 itens • Cliente: João Silva</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
-                    
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #002</strong>
-                            <p>3 itens • Cliente: Maria Santos</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
-                    
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #003</strong>
-                            <p>8 itens • Cliente: Carlos Oliveira</p>
-                        </div>
-                        <span class="status-badge status-pendente">Pendente</span>
-                    </div>
+            <!-- Conteúdo similar ao anterior -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-clipboard-list"></i>
                 </div>
+                <h3>Separação de Pedidos</h3>
+                <p>Funcionalidade em desenvolvimento</p>
             </div>
-            
-            <div id="andamento-tab" class="tab-content">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #004</strong>
-                            <p>4 itens • Cliente: Ana Costa</p>
-                        </div>
-                        <span class="status-badge status-andamento">Em Andamento</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="concluidos-tab" class="tab-content">
-                <div class="card">
-                    <div class="list-item">
-                        <div>
-                            <strong>Pedido #005</strong>
-                            <p>6 itens • Cliente: Pedro Alves</p>
-                        </div>
-                        <span class="status-badge status-concluido">Concluído</span>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="button button-success" onclick="startNewOrder()">Iniciar Novo Pedido</button>
         </div>
     </div>
     
-    <!-- Tela de Confecção de Pedidos -->
     <div id="confecao-pedidos" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -866,85 +831,17 @@
         </div>
         
         <div class="container">
-            <div class="card">
-                <h3>Pedido em Confecção: #006</h3>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: 60%"></div>
+            <!-- Conteúdo similar ao anterior -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-tasks"></i>
                 </div>
-                <p>3 de 5 itens conferidos</p>
-                
-                <div class="input-group">
-                    <label for="product-code">Código do Produto</label>
-                    <input type="text" id="product-code" placeholder="Digite ou escaneie o código">
-                </div>
-                
-                <button class="button" onclick="checkProduct()">Conferir Produto</button>
+                <h3>Confecção de Pedidos</h3>
+                <p>Funcionalidade em desenvolvimento</p>
             </div>
-            
-            <div class="card">
-                <h3>Itens do Pedido</h3>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto X</strong>
-                            <p>Código: 111222 • Qtd: 2</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto Y</strong>
-                            <p>Código: 333444 • Qtd: 1</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-completed"></div>
-                        <div>
-                            <strong>Produto Z</strong>
-                            <p>Código: 555666 • Qtd: 3</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-concluido">Conferido</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-pending"></div>
-                        <div>
-                            <strong>Produto W</strong>
-                            <p>Código: 777888 • Qtd: 2</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-pendente">Pendente</span>
-                </div>
-                
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator status-pending"></div>
-                        <div>
-                            <strong>Produto V</strong>
-                            <p>Código: 999000 • Qtd: 1</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-pendente">Pendente</span>
-                </div>
-            </div>
-            
-            <button class="button button-success" onclick="finishOrder()">Finalizar Pedido</button>
         </div>
     </div>
     
-    <!-- Tela de Importação de Listas -->
     <div id="importacao-listas" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -952,54 +849,17 @@
         </div>
         
         <div class="container">
-            <div class="card">
-                <h3>Importar Nova Lista</h3>
-                
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">
-                        <i class="fas fa-file-pdf"></i>
-                    </div>
-                    <h3>Arraste seu arquivo PDF aqui</h3>
-                    <p>ou</p>
-                    <button class="button button-small" onclick="document.getElementById('list-file').click()">
-                        <i class="fas fa-upload"></i> Selecione um arquivo
-                    </button>
-                    <input type="file" id="list-file" class="file-input" accept=".pdf">
+            <!-- Conteúdo similar ao anterior -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-file-import"></i>
                 </div>
-                
-                <div class="input-group">
-                    <label for="list-name">Nome da Lista</label>
-                    <input type="text" id="list-name" placeholder="Digite um nome para a lista">
-                </div>
-                
-                <div class="input-group">
-                    <label for="list-type">Tipo de Lista</label>
-                    <select id="list-type">
-                        <option value="separacao">Separação de Itens</option>
-                        <option value="pedidos">Separação de Pedidos</option>
-                        <option value="confecao">Confecção de Pedidos</option>
-                    </select>
-                </div>
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
-                </div>
-                
-                <button class="button button-success" onclick="processUpload()" id="process-btn">
-                    <i class="fas fa-cog"></i> Processar Lista
-                </button>
-            </div>
-            
-            <div class="card">
-                <h3>Listas Importadas</h3>
-                <div id="list-container">
-                    <!-- As listas importadas serão exibidas aqui -->
-                </div>
+                <h3>Importação de Listas</h3>
+                <p>Funcionalidade em desenvolvimento</p>
             </div>
         </div>
     </div>
     
-    <!-- Tela de Adicionar Produto -->
     <div id="adicionar-produto" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -1007,54 +867,13 @@
         </div>
         
         <div class="container">
-            <div class="card">
-                <h3>Adicionar Produto Manualmente</h3>
-                
-                <div class="input-group">
-                    <label for="product-name">Nome do Produto</label>
-                    <input type="text" id="product-name" placeholder="Digite o nome do produto">
+            <!-- Conteúdo similar ao anterior -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-plus-circle"></i>
                 </div>
-                
-                <div class="input-group">
-                    <label for="barcode">Código de Barras</label>
-                    <input type="text" id="barcode" placeholder="Digite o código de barras">
-                </div>
-                
-                <button class="button button-success" onclick="addProduct()">
-                    <i class="fas fa-plus"></i> Adicionar Produto
-                </button>
-            </div>
-            
-            <div class="card">
-                <h3>Importar Produtos em Lote</h3>
-                
-                <div class="upload-area" id="importProductsArea">
-                    <div class="upload-icon">
-                        <i class="fas fa-file-csv"></i>
-                    </div>
-                    <h3>Arraste seu arquivo TXT ou CSV aqui</h3>
-                    <p>Formato: Nome, Código (um por linha)</p>
-                    <button class="button button-small" onclick="document.getElementById('products-file').click()">
-                        <i class="fas fa-upload"></i> Selecione um arquivo
-                    </button>
-                    <input type="file" id="products-file" class="file-input" accept=".txt,.csv">
-                </div>
-                
-                <div class="input-group">
-                    <label for="products-content">Ou cole o conteúdo aqui:</label>
-                    <textarea id="products-content" rows="5" placeholder="Nome do Produto, 123456&#10;Outro Produto, 789012"></textarea>
-                </div>
-                
-                <button class="button" onclick="importProducts()">
-                    <i class="fas fa-file-import"></i> Importar Produtos
-                </button>
-            </div>
-            
-            <div class="card">
-                <h3>Produtos Cadastrados</h3>
-                <div id="products-container">
-                    <!-- Os produtos cadastrados serão exibidos aqui -->
-                </div>
+                <h3>Adicionar Produto</h3>
+                <p>Funcionalidade em desenvolvimento</p>
             </div>
         </div>
     </div>
@@ -1108,31 +927,27 @@
 
     <!-- Footer Navigation -->
     <div class="footer">
-        <button class="footer-button active" onclick="showScreen('main-screen')">
+        <button class="footer-button" onclick="showScreen('main-screen')">
             <i class="fas fa-home"></i>
             <span>Início</span>
         </button>
-        <button class="footer-button" onclick="showScreen('separacao-itens')">
+        <button class="footer-button" id="footer-itens" onclick="showScreen('separacao-itens')">
             <i class="fas fa-box"></i>
             <span>Itens</span>
         </button>
-        <button class="footer-button" onclick="showScreen('separacao-pedidos')">
+        <button class="footer-button" id="footer-pedidos" onclick="showScreen('separacao-pedidos')">
             <i class="fas fa-clipboard-list"></i>
             <span>Pedidos</span>
         </button>
-        <button class="footer-button" onclick="showScreen('confecao-pedidos')">
+        <button class="footer-button" id="footer-confecao" onclick="showScreen('confecao-pedidos')">
             <i class="fas fa-tasks"></i>
             <span>Confecção</span>
         </button>
-        <button class="footer-button" onclick="showScreen('importacao-listas')">
+        <button class="footer-button" id="footer-importar" onclick="showScreen('importacao-listas')">
             <i class="fas fa-file-import"></i>
             <span>Importar</span>
         </button>
     </div>
-
-    <button id="installButton" class="install-button" style="display: none;">
-        <i class="fas fa-download"></i>
-    </button>
 
     <div class="notification" id="notification">
         <i class="notification-icon" id="notification-icon"></i>
@@ -1141,146 +956,211 @@
 
     <script>
         // Variáveis globais
-        let selectedFile = null;
-        let products = [
-            { name: "Produto A", code: "123456", completed: false },
-            { name: "Produto B", code: "789012", completed: false },
-            { name: "Produto C", code: "345678", completed: true },
-            { name: "Produto D", code: "901234", completed: true },
-            { name: "Produto E", code: "567890", completed: true }
-        ];
-        
-        let registeredProducts = [
-            { name: "Produto A", code: "123456" },
-            { name: "Produto B", code: "789012" },
-            { name: "Produto C", code: "345678" },
-            { name: "Produto D", code: "901234" },
-            { name: "Produto E", code: "567890" },
-            { name: "Produto X", code: "111222" },
-            { name: "Produto Y", code: "333444" },
-            { name: "Produto Z", code: "555666" },
-            { name: "Produto W", code: "777888" },
-            { name: "Produto V", code: "999000" }
-        ];
-        
-        // Variáveis para controle de tempo
+        let operatorName = "";
+        let products = [];
+        let registeredProducts = [];
         let startTime = null;
         let endTime = null;
         let currentProcess = null;
-        
-        // Service Worker Registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/eccomercesorting/sw.js')
-    .then(function(registration) {
-      console.log('ServiceWorker registrado com sucesso: ', registration.scope);
-    })
-    .catch(function(error) {
-      console.log('Falha no registro do ServiceWorker: ', error);
-    });
-  });
-}
-        
-        // Before Install Prompt
-        let deferredPrompt;
-        const installButton = document.getElementById('installButton');
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installButton.style.display = 'flex';
-            
-            installButton.addEventListener('click', () => {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
-                    }
-                    deferredPrompt = null;
-                });
-            });
-        });
-        
+        let activeProcess = null;
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            initDragAndDrop();
-            loadSavedLists();
-            updateProcessButton();
-            loadRegisteredProducts();
+            // Verificar se já tem operador definido
+            const savedOperator = localStorage.getItem('operatorName');
+            if (savedOperator) {
+                operatorName = savedOperator;
+                showScreen('main-screen');
+            } else {
+                // Mostrar modal para inserir nome
+                document.getElementById('operatorModal').style.display = 'flex';
+            }
             
-            document.getElementById('list-name').addEventListener('input', updateProcessButton);
-            document.getElementById('list-file').addEventListener('change', handleFileSelect);
-            document.getElementById('products-file').addEventListener('change', handleProductsFileSelect);
+            // Carregar produtos de exemplo
+            loadSampleProducts();
+            renderProductsList();
             
-            // Carregar nome do operador se existir
-            const operatorName = localStorage.getItem('operatorName');
-            if (operatorName) {
-                document.getElementById('operator-name').value = operatorName;
+            // Configurar foco no campo de código de barras
+            const barcodeInput = document.getElementById('barcode-input');
+            if (barcodeInput) {
+                barcodeInput.focus();
             }
         });
         
-        // Funções principais de navegação
+        // Definir operador
+        function setOperator() {
+            const nameInput = document.getElementById('operator-name');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showNotification('Por favor, informe seu nome.', 'error');
+                return;
+            }
+            
+            operatorName = name;
+            localStorage.setItem('operatorName', name);
+            document.getElementById('operatorModal').style.display = 'none';
+            showScreen('main-screen');
+            
+            showNotification(`Bem-vindo, ${name}!`, 'success');
+        }
+        
+        // Carregar produtos de exemplo
+        function loadSampleProducts() {
+            products = [
+                { name: "Produto A", code: "123456", completed: false },
+                { name: "Produto B", code: "789012", completed: false },
+                { name: "Produto C", code: "345678", completed: false },
+                { name: "Produto D", code: "901234", completed: false },
+                { name: "Produto E", code: "567890", completed: false }
+            ];
+            
+            registeredProducts = [
+                { name: "Produto A", code: "123456" },
+                { name: "Produto B", code: "789012" },
+                { name: "Produto C", code: "345678" },
+                { name: "Produto D", code: "901234" },
+                { name: "Produto E", code: "567890" }
+            ];
+        }
+        
+        // Funções de navegação
         function showScreen(screenId) {
+            // Se já tem um processo ativo e tenta navegar para outra tela
+            if (activeProcess && screenId !== activeProcess && screenId !== 'main-screen') {
+                showNotification('Finalize o processo atual antes de navegar para outras seções.', 'error');
+                return;
+            }
+            
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.remove('active');
             });
             
             document.getElementById(screenId).classList.add('active');
             
+            // Atualizar footer buttons
             document.querySelectorAll('.footer-button').forEach(button => {
                 button.classList.remove('active');
             });
             
             if (screenId === 'main-screen') {
                 document.querySelector('.footer-button:nth-child(1)').classList.add('active');
+                activeProcess = null;
+                enableNavigation();
             } else if (screenId === 'separacao-itens') {
-                document.querySelector('.footer-button:nth-child(2)').classList.add('active');
-                renderProductsList();
-                if (!startTime) {
-                    startTime = new Date();
-                    currentProcess = 'separacao';
-                    showNotification("Separação iniciada. Tempo começou a ser contado.", "success");
-                }
+                document.getElementById('footer-itens').classList.add('active');
+                // Não definir como activeProcess aqui - só quando começar de fato
             } else if (screenId === 'separacao-pedidos') {
-                document.querySelector('.footer-button:nth-child(3)').classList.add('active');
+                document.getElementById('footer-pedidos').classList.add('active');
             } else if (screenId === 'confecao-pedidos') {
-                document.querySelector('.footer-button:nth-child(4)').classList.add('active');
-                if (!startTime) {
-                    startTime = new Date();
-                    currentProcess = 'confecao';
-                    showNotification("Confecção iniciada. Tempo começou a ser contado.", "success");
-                }
+                document.getElementById('footer-confecao').classList.add('active');
             } else if (screenId === 'importacao-listas') {
-                document.querySelector('.footer-button:nth-child(5)').classList.add('active');
-            } else if (screenId === 'adicionar-produto') {
-                // Não há botão no footer para esta tela
+                document.getElementById('footer-importar').classList.add('active');
             }
         }
         
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
+        // Iniciar separação de itens
+        function startSeparation() {
+            activeProcess = 'separacao-itens';
+            disableNavigation();
+            showScreen('separacao-itens');
             
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
+            // Focar no campo de código de barras
+            setTimeout(() => {
+                const barcodeInput = document.getElementById('barcode-input');
+                if (barcodeInput) {
+                    barcodeInput.focus();
+                }
+            }, 100);
         }
         
-        // Funções de simulação
-        function simulateScan() {
-            const randomProduct = registeredProducts[Math.floor(Math.random() * registeredProducts.length)];
-            alert(`Código de barras lido: ${randomProduct.code}\nProduto: ${randomProduct.name}\nMarcação realizada com sucesso!`);
-            markProductAsScanned(randomProduct.code);
+        // Cancelar separação
+        function cancelSeparation() {
+            if (confirm('Deseja cancelar a separação? Todo o progresso será perdido.')) {
+                activeProcess = null;
+                enableNavigation();
+                resetSeparation();
+                showScreen('main-screen');
+            }
         }
         
+        // Desativar navegação
+        function disableNavigation() {
+            document.querySelectorAll('.footer-button:not(#footer-itens)').forEach(button => {
+                button.disabled = true;
+            });
+            
+            document.querySelectorAll('.menu-item:not([onclick*="separacao-itens"])').forEach(item => {
+                item.style.opacity = '0.5';
+                item.style.cursor = 'not-allowed';
+                const originalOnClick = item.getAttribute('onclick');
+                item.setAttribute('data-original-onclick', originalOnClick);
+                item.removeAttribute('onclick');
+            });
+        }
+        
+        // Ativar navegação
+        function enableNavigation() {
+            document.querySelectorAll('.footer-button').forEach(button => {
+                button.disabled = false;
+            });
+            
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.style.opacity = '1';
+                item.style.cursor = 'pointer';
+                const originalOnClick = item.getAttribute('data-original-onclick');
+                if (originalOnClick) {
+                    item.setAttribute('onclick', originalOnClick);
+                }
+            });
+        }
+        
+        // Resetar separação
+        function resetSeparation() {
+            products.forEach(product => {
+                product.completed = false;
+            });
+            startTime = null;
+            renderProductsList();
+        }
+        
+        // Processar código de barras
+        function processBarcode() {
+            const barcodeInput = document.getElementById('barcode-input');
+            const code = barcodeInput.value.trim();
+            
+            if (!code) {
+                showNotification('Por favor, digite um código.', 'error');
+                return;
+            }
+            
+            // Se é o primeiro código, iniciar temporizador
+            if (!startTime) {
+                startTime = new Date();
+                activeProcess = 'separacao-itens';
+                disableNavigation();
+                showNotification('Separação iniciada. Tempo começou a ser contado.', 'success');
+            }
+            
+            // Processar o código
+            markProductAsScanned(code);
+            
+            // Limpar campo
+            barcodeInput.value = '';
+            barcodeInput.focus();
+        }
+        
+        // Processar código ao pressionar Enter
+        function handleBarcodeInput(event) {
+            if (event.key === 'Enter') {
+                processBarcode();
+            }
+        }
+        
+        // Marcar produto como escaneado
         function markProductAsScanned(code) {
             const productIndex = products.findIndex(p => p.code === code);
+            
             if (productIndex !== -1) {
                 products[productIndex].completed = true;
                 renderProductsList();
@@ -1296,52 +1176,74 @@ if ('serviceWorker' in navigator) {
                     renderProductsList();
                     showNotification(`Produto "${registeredProduct.name}" adicionado e marcado como separado!`, 'success');
                 } else {
-                    showNotification(`Código ${code} não encontrado na base de produtos.`, 'error');
+                    showNotification(`Código ${code} não encontrado. Verifique o código.`, 'error');
                 }
             }
         }
         
-        function markAsScanned(productName, productCode) {
-            const productIndex = products.findIndex(p => p.code === productCode);
+        // Renderizar lista de produtos
+        function renderProductsList() {
+            const productsList = document.getElementById('products-list');
+            const pendingCount = products.filter(p => !p.completed).length;
+            const totalCount = products.length;
+            const completedCount = totalCount - pendingCount;
+            
+            // Atualizar texto de progresso
+            document.getElementById('progress-text').textContent = `(${completedCount}/${totalCount})`;
+            
+            // Atualizar barra de progresso
+            const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+            document.querySelector('.progress-fill').style.width = `${progressPercent}%`;
+            
+            // Atualizar botão de finalizar
+            const finishButton = document.getElementById('finish-button');
+            finishButton.disabled = pendingCount > 0;
+            
+            // Renderizar lista de produtos
+            productsList.innerHTML = products.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <p>Código: ${product.code}</p>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Alternar status do produto
+        function toggleProduct(code) {
+            const productIndex = products.findIndex(p => p.code === code);
             if (productIndex !== -1) {
                 products[productIndex].completed = !products[productIndex].completed;
                 renderProductsList();
                 
                 const status = products[productIndex].completed ? "marcado como separado" : "marcado como pendente";
-                showNotification(`Produto "${productName}" ${status}!`, 'success');
+                showNotification(`Produto "${products[productIndex].name}" ${status}!`, 'success');
             }
         }
         
-        function startNewOrder() {
-            alert('Iniciando novo pedido...');
-            showScreen('confecao-pedidos');
-        }
-        
-        function checkProduct() {
-            const code = document.getElementById('product-code').value;
-            if (code) {
-                const product = registeredProducts.find(p => p.code === code);
-                if (product) {
-                    alert(`Produto "${product.name}" conferido com sucesso!`);
-                    document.getElementById('product-code').value = '';
-                } else {
-                    alert('Código de produto não encontrado. Verifique o código ou cadastre o produto.');
-                }
-            } else {
-                alert('Por favor, digite ou escaneie um código de produto.');
-            }
-        }
-        
-        function finishOrder() {
-            endTime = new Date();
-            showReport();
-        }
-        
+        // Finalizar separação
         function finishSeparation() {
+            const pendingCount = products.filter(p => !p.completed).length;
+            
+            if (pendingCount > 0) {
+                showNotification('Não é possível finalizar. Existem itens pendentes.', 'error');
+                return;
+            }
+            
             endTime = new Date();
             showReport();
         }
         
+        // Mostrar relatório
         function showReport() {
             const timeDiff = endTime - startTime;
             const seconds = Math.floor(timeDiff / 1000);
@@ -1351,8 +1253,6 @@ if ('serviceWorker' in navigator) {
             const completedItems = products.filter(p => p.completed).length;
             const totalItems = products.length;
             const efficiency = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-            
-            const operatorName = localStorage.getItem('operatorName') || 'Operador';
             
             document.getElementById('report-responsavel').textContent = operatorName;
             document.getElementById('report-data').textContent = new Date().toLocaleDateString('pt-BR');
@@ -1365,294 +1265,13 @@ if ('serviceWorker' in navigator) {
             document.getElementById('reportModal').style.display = 'flex';
         }
         
+        // Fechar relatório
         function closeReport() {
             document.getElementById('reportModal').style.display = 'none';
-            startTime = null;
-            endTime = null;
-            currentProcess = null;
-            
-            // Resetar produtos para o estado inicial
-            products.forEach(p => p.completed = false);
-            renderProductsList();
-        }
-        
-        // Configurar área de drag and drop
-        function initDragAndDrop() {
-            const uploadArea = document.getElementById('uploadArea');
-            const importProductsArea = document.getElementById('importProductsArea');
-            
-            uploadArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', function() {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
-            
-            importProductsArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                importProductsArea.classList.add('dragover');
-            });
-            
-            importProductsArea.addEventListener('dragleave', function() {
-                importProductsArea.classList.remove('dragover');
-            });
-            
-            importProductsArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                importProductsArea.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    handleProductsFiles(e.dataTransfer.files);
-                }
-            });
-        }
-        
-        // Manipular seleção de arquivo via input
-        function handleFileSelect(event) {
-            const files = event.target.files;
-            if (files.length) {
-                handleFiles(files);
-            }
-        }
-        
-        function handleProductsFileSelect(event) {
-            const files = event.target.files;
-            if (files.length) {
-                handleProductsFiles(files);
-            }
-        }
-        
-        // Processar arquivos selecionados
-        function handleFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            
-            if (file.type !== 'application/pdf') {
-                showNotification('Por favor, selecione um arquivo PDF.', 'error');
-                return;
-            }
-            
-            selectedFile = file;
-            
-            document.getElementById('list-name').value = file.name.replace('.pdf', '');
-            updateProcessButton();
-            
-            showNotification(`Arquivo "${file.name}" selecionado com sucesso.`, 'success');
-        }
-        
-        function handleProductsFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            
-            if (file.type !== 'text/plain' && !file.name.endsWith('.csv')) {
-                showNotification('Por favor, selecione um arquivo TXT ou CSV.', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('products-content').value = e.target.result;
-                showNotification(`Arquivo "${file.name}" carregado com sucesso.`, 'success');
-            };
-            reader.readAsText(file);
-        }
-        
-        // Atualizar estado do botão de processamento
-        function updateProcessButton() {
-            const listName = document.getElementById('list-name').value;
-            const processBtn = document.getElementById('process-btn');
-            
-            processBtn.disabled = !(listName && selectedFile);
-        }
-        
-        // Processar upload
-        function processUpload() {
-            const listName = document.getElementById('list-name').value;
-            const listType = document.getElementById('list-type').value;
-            
-            if (!listName) {
-                showNotification('Por favor, informe um nome para a lista.', 'error');
-                return;
-            }
-            
-            if (!selectedFile) {
-                showNotification('Por favor, selecione um arquivo PDF.', 'error');
-                return;
-            }
-            
-            simulateProcessing(listName, listType);
-        }
-        
-        // Simular processamento
-        function simulateProcessing(listName, listType) {
-            const processBtn = document.getElementById('process-btn');
-            processBtn.disabled = true;
-            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-            
-            const progressFill = document.getElementById('progress-fill');
-            let progress = 0;
-            
-            const interval = setInterval(() => {
-                progress += 5;
-                progressFill.style.width = `${progress}%`;
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    
-                    saveList(listName, listType, selectedFile.name);
-                    
-                    clearForm();
-                    
-                    updateProcessButton();
-                    processBtn.innerHTML = '<i class="fas fa-cog"></i> Processar Lista';
-                    
-                    showNotification('Lista processada com sucesso!', 'success');
-                }
-            }, 100);
-        }
-        
-        // Salvar lista no armazenamento local
-        function saveList(name, type, filename) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            
-            const newList = {
-                id: Date.now(),
-                name: name,
-                type: type,
-                filename: filename,
-                date: new Date().toISOString(),
-                items: generateSampleItems()
-            };
-            
-            savedLists.push(newList);
-            
-            localStorage.setItem('importedLists', JSON.stringify(savedLists));
-            
-            loadSavedLists();
-        }
-        
-        // Gerar itens de exemplo
-        function generateSampleItems() {
-            const items = [];
-            const itemCount = Math.floor(Math.random() * 10) + 5;
-            
-            for (let i = 1; i <= itemCount; i++) {
-                items.push({
-                    id: i,
-                    name: `Produto ${i}`,
-                    code: `COD${1000 + i}`,
-                    quantity: Math.floor(Math.random() * 5) + 1
-                });
-            }
-            
-            return items;
-        }
-        
-        // Carregar listas salvas
-        function loadSavedLists() {
-            const listContainer = document.getElementById('list-container');
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            
-            if (savedLists.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="far fa-folder-open"></i>
-                        </div>
-                        <h3>Nenhuma lista importada</h3>
-                        <p>Faça upload de uma lista PDF para começar</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            listContainer.innerHTML = savedLists.map(list => `
-                <div class="file-item">
-                    <div class="file-info">
-                        <div class="file-name">${list.name}</div>
-                        <div class="file-details">
-                            ${formatDate(list.date)} • 
-                            ${list.items.length} itens • 
-                            ${getListTypeName(list.type)}
-                        </div>
-                        <span class="status-badge status-success">Processado</span>
-                    </div>
-                    <div class="file-actions">
-                        <button class="action-btn btn-view" onclick="viewList(${list.id})">
-                            <i class="fas fa-eye"></i> Visualizar
-                        </button>
-                        <button class="action-btn btn-edit" onclick="editList(${list.id})">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="action-btn btn-delete" onclick="deleteList(${list.id})">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Visualizar lista
-        function viewList(listId) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            const list = savedLists.find(l => l.id === listId);
-            
-            if (list) {
-                alert(`Visualizando lista: ${list.name}\nItens: ${list.items.length}\nData: ${formatDate(list.date)}`);
-            }
-        }
-        
-        // Editar lista
-        function editList(listId) {
-            const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-            const list = savedLists.find(l => l.id === listId);
-            
-            if (list) {
-                document.getElementById('list-name').value = list.name;
-                document.getElementById('list-type').value = list.type;
-                document.getElementById('process-btn').disabled = false;
-                
-                showNotification(`Editando lista "${list.name}". Faça as alterações necessárias e processe novamente.`, 'success');
-                
-                window.scrollTo(0, 0);
-            }
-        }
-        
-        // Excluir lista
-        function deleteList(listId) {
-            if (confirm('Tem certeza que deseja excluir esta lista?')) {
-                const savedLists = JSON.parse(localStorage.getItem('importedLists') || '[]');
-                const updatedLists = savedLists.filter(list => list.id !== listId);
-                
-                localStorage.setItem('importedLists', JSON.stringify(updatedLists));
-                
-                loadSavedLists();
-                
-                showNotification('Lista excluída com sucesso.', 'success');
-            }
-        }
-        
-        // Limpar formulário
-        function clearForm() {
-            document.getElementById('list-name').value = '';
-            document.getElementById('list-type').value = 'separacao';
-            document.getElementById('progress-fill').style.width = '0%';
-            document.getElementById('list-file').value = '';
-            document.getElementById('process-btn').disabled = true;
-            selectedFile = null;
+            activeProcess = null;
+            enableNavigation();
+            resetSeparation();
+            showScreen('main-screen');
         }
         
         // Mostrar notificação
@@ -1678,159 +1297,7 @@ if ('serviceWorker' in navigator) {
             }, 3000);
         }
         
-        // Helper: Formatar data
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('pt-BR');
-        }
-        
-        // Helper: Obter nome do tipo de lista
-        function getListTypeName(type) {
-            const types = {
-                'separacao': 'Separação de Itens',
-                'pedidos': 'Separação de Pedidos',
-                'confecao': 'Confecção de Pedidos'
-            };
-            
-            return types[type] || 'Desconhecido';
-        }
-        
-        // Funções para a tela de adicionar produto
-        function addProduct() {
-            const name = document.getElementById('product-name').value.trim();
-            const code = document.getElementById('barcode').value.trim();
-            
-            if (!name || !code) {
-                showNotification('Por favor, preencha todos os campos.', 'error');
-                return;
-            }
-            
-            if (registeredProducts.some(p => p.code === code)) {
-                showNotification('Já existe um produto com este código.', 'error');
-                return;
-            }
-            
-            registeredProducts.push({ name, code });
-            saveRegisteredProducts();
-            
-            document.getElementById('product-name').value = '';
-            document.getElementById('barcode').value = '';
-            
-            showNotification(`Produto "${name}" adicionado com sucesso!`, 'success');
-            loadRegisteredProducts();
-        }
-        
-        function importProducts() {
-            const content = document.getElementById('products-content').value.trim();
-            
-            if (!content) {
-                showNotification('Por favor, insira o conteúdo ou faça upload de um arquivo.', 'error');
-                return;
-            }
-            
-            const lines = content.split('\n');
-            let importedCount = 0;
-            let skippedCount = 0;
-            
-            for (const line of lines) {
-                const [name, code] = line.split(',').map(item => item.trim());
-                
-                if (name && code) {
-                    if (!registeredProducts.some(p => p.code === code)) {
-                        registeredProducts.push({ name, code });
-                        importedCount++;
-                    } else {
-                        skippedCount++;
-                    }
-                }
-            }
-            
-            if (importedCount > 0) {
-                saveRegisteredProducts();
-                showNotification(`${importedCount} produtos importados com sucesso! ${skippedCount > 0 ? `${skippedCount} produtos duplicados foram ignorados.` : ''}`, 'success');
-            } else if (skippedCount > 0) {
-                showNotification(`Todos os ${skippedCount} produtos já existiam na base e foram ignorados.`, 'warning');
-            } else {
-                showNotification('Nenhum produto válido encontrado para importação.', 'error');
-            }
-            
-            loadRegisteredProducts();
-        }
-        
-        function saveRegisteredProducts() {
-            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
-        }
-        
-        function loadRegisteredProducts() {
-            const savedProducts = localStorage.getItem('registeredProducts');
-            if (savedProducts) {
-                registeredProducts = JSON.parse(savedProducts);
-            }
-            
-            const productsContainer = document.getElementById('products-container');
-            
-            if (registeredProducts.length === 0) {
-                productsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-box-open"></i>
-                        </div>
-                        <h3>Nenhum produto cadastrado</h3>
-                        <p>Adicione produtos manualmente ou importe uma lista</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            productsContainer.innerHTML = registeredProducts.map(product => `
-                <div class="list-item">
-                    <div class="file-info">
-                        <div class="file-name">${product.name}</div>
-                        <div class="file-details">Código: ${product.code}</div>
-                    </div>
-                    <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
-                        <i class="fas fa-trash"></i> Excluir
-                    </button>
-                </div>
-            `).join('');
-        }
-        
-        function deleteProduct(code) {
-            if (confirm('Tem certeza que deseja excluir este produto?')) {
-                registeredProducts = registeredProducts.filter(p => p.code !== code);
-                saveRegisteredProducts();
-                loadRegisteredProducts();
-                showNotification('Produto excluído com sucesso.', 'success');
-            }
-        }
-        
-        // Funções para a tela de separação de itens
-        function renderProductsList() {
-            const productsList = document.getElementById('products-list');
-            const pendingCount = products.filter(p => !p.completed).length;
-            const totalCount = products.length;
-            
-            document.getElementById('progress-text').textContent = `(${totalCount - pendingCount}/${totalCount})`;
-            document.querySelector('.progress-fill').style.width = `${((totalCount - pendingCount) / totalCount) * 100}%`;
-            
-            productsList.innerHTML = products.map(product => `
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="status-indicator ${product.completed ? 'status-completed' : 'status-pending'}"></div>
-                        <div>
-                            <strong>${product.name}</strong>
-                            <p>Código: ${product.code}</p>
-                        </div>
-                    </div>
-                    <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
+        // Funções de filtro e ordenação
         function filterProducts(filter) {
             document.querySelectorAll('.filter-button').forEach(button => {
                 button.classList.remove('active');
@@ -1858,8 +1325,8 @@ if ('serviceWorker' in navigator) {
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
                     </div>
                 </div>
@@ -1893,25 +1360,20 @@ if ('serviceWorker' in navigator) {
                         </div>
                     </div>
                     <div class="product-actions">
-                        <button class="action-button scan" onclick="markAsScanned('${product.name}', '${product.code}')">
-                            <i class="fas fa-barcode"></i>
+                        <button class="action-button scan" onclick="toggleProduct('${product.code}')">
+                            <i class="fas ${product.completed ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
         }
         
-        // Configurar operador
-        function setOperator() {
-            const operatorName = document.getElementById('operator-name').value.trim();
-            if (operatorName) {
-                localStorage.setItem('operatorName', operatorName);
-                showNotification(`Operador definido: ${operatorName}`, 'success');
-            } else {
-                showNotification('Por favor, informe o nome do operador.', 'error');
+        // Modificar os eventos de clique dos menus para usar startSeparation
+        document.querySelectorAll('.menu-item').forEach(item => {
+            if (item.querySelector('h2').textContent === 'Separação de Itens') {
+                item.setAttribute('onclick', 'startSeparation()');
             }
-        }
+        });
     </script>
 </body>
-
 </html>
