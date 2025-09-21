@@ -10,9 +10,7 @@
     <link rel="icon" href="icon-192x192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192x192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Incluir a biblioteca QuaggaJS para leitura de código de barras -->
     <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
-    <!-- Incluir a biblioteca pdf.js para extração de texto de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root {
@@ -246,6 +244,11 @@
         }
         
         #barcode-scanner {
+            width: 100%;
+            height: 100%;
+        }
+
+        #barcode-scanner video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -644,7 +647,6 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            position: relative;
         }
         
         .close-button {
@@ -652,9 +654,6 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
-            position: absolute;
-            right: 0;
-            top: 0;
         }
         
         .report-detail {
@@ -900,7 +899,6 @@
     </style>
 </head>
 <body>
-    <!-- Modal para inserir nome do operador -->
     <div class="operator-modal" id="operatorModal">
         <div class="operator-content">
             <h2>Identificação do Operador</h2>
@@ -917,7 +915,6 @@
         </div>
     </div>
 
-    <!-- Tela Principal/Menu -->
     <div id="main-screen" class="screen">
         <header>
             <h1>App de Separação</h1>
@@ -964,7 +961,6 @@
         </div>
     </div>
     
-    <!-- Tela de Separação de Itens -->
     <div id="separacao-itens" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="cancelSeparation()"><i class="fas fa-arrow-left"></i></button>
@@ -1039,8 +1035,7 @@
                 </div>
                 
                 <div id="products-list">
-                    <!-- Produtos serão carregados aqui -->
-                </div>
+                    </div>
                 
                 <button class="button button-success" id="finish-button" onclick="finishSeparation()" disabled>
                     <i class="fas fa-check-circle"></i> Finalizar Separação
@@ -1049,7 +1044,6 @@
         </div>
     </div>
     
-    <!-- Tela de Importação de Listas -->
     <div id="importacao-listas" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -1107,8 +1101,7 @@
             <div class="card" id="importedProductsCard" style="display: none;">
                 <h3>Produtos Importados</h3>
                 <div class="product-preview" id="productPreview">
-                    <!-- Prévia dos produtos importados -->
-                </div>
+                    </div>
                 <div class="input-group">
                     <label for="listName">Nome da Lista</label>
                     <input type="text" id="listName" placeholder="Digite um nome para a lista">
@@ -1120,7 +1113,6 @@
         </div>
     </div>
     
-    <!-- Tela de Adicionar Produto -->
     <div id="adicionar-produto" class="screen">
         <div class="sub-header">
             <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
@@ -1145,6 +1137,30 @@
                     <i class="fas fa-plus"></i> Adicionar Produto
                 </button>
             </div>
+
+            <div class="card">
+                <h3>Importar Produtos em Lote (TXT)</h3>
+                <div class="upload-area" id="importProductsArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>Arraste seu arquivo TXT aqui</h3>
+                    <p>Formato: NOME DO PRODUTO, CÓDIGO</p>
+                    <button class="button button-small" onclick="document.getElementById('products-file-import').click()">
+                        <i class="fas fa-upload"></i> Selecione um arquivo
+                    </button>
+                    <input type="file" id="products-file-import" class="file-input" accept=".txt" onchange="handleProductsFileSelect(event)">
+                </div>
+                
+                <div class="input-group">
+                    <label for="products-content-import">Ou cole o conteúdo aqui:</label>
+                    <textarea id="products-content-import" rows="5" placeholder="NOME DO PRODUTO, 123456&#10;PRODUTO KIT, 123456/234567"></textarea>
+                </div>
+                
+                <button class="button" onclick="importProducts()">
+                    <i class="fas fa-file-import"></i> Importar Produtos
+                </button>
+            </div>
             
             <div class="card">
                 <h3>Produtos Cadastrados</h3>
@@ -1154,13 +1170,77 @@
                 </div>
                 
                 <div id="products-list-registered">
-                    <!-- Produtos cadastrados serão listados aqui -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
+
+    <div id="relatorios" class="screen">
+        <div class="sub-header">
+            <button class="back-button" onclick="showScreen('main-screen')"><i class="fas fa-arrow-left"></i></button>
+            <h1>Relatórios</h1>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h3>Processos Concluídos</h3>
+                <p>Visualize e exporte os relatórios de processos finalizados</p>
+                
+                <div id="reports-list">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-modal" id="reportModal">
+        <div class="report-content">
+            <div class="report-header">
+                <h2>Relatório de Separação</h2>
+                <button class="close-button" onclick="closeReport()">&times;</button>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Responsável:</span>
+                <span id="report-responsavel">Operador</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Data:</span>
+                <span id="report-data">01/01/2023</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Hora de Início:</span>
+                <span id="report-inicio">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Hora de Término:</span>
+                <span id="report-termino">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Tempo Total:</span>
+                <span id="report-tempo">00:00:00</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Itens Processados:</span>
+                <span id="report-itens">0/0</span>
+            </div>
+            
+            <div class="report-detail">
+                <span class="report-label">Eficiência:</span>
+                <span id="report-eficiencia">0%</span>
+            </div>
+            
+            <button class="button button-success" onclick="closeReport()">OK</button>
+            <button class="button" onclick="exportReport()">
+                <i class="fas fa-download"></i> Exportar como TXT
+            </button>
+        </div>
+    </div>
     
-    <!-- Rodapé de Navegação -->
     <div class="footer">
         <button class="footer-button active" onclick="showScreen('main-screen')">
             <i class="fas fa-home"></i>
@@ -1183,7 +1263,6 @@
         </button>
     </div>
     
-    <!-- Notificações -->
     <div class="notification notification-success" id="successNotification">
         <i class="fas fa-check-circle notification-icon"></i>
         <span id="successMessage">Operação realizada com sucesso!</span>
@@ -1204,6 +1283,16 @@
         let importedProducts = [];
         let registeredProducts = JSON.parse(localStorage.getItem('registeredProducts')) || [];
         
+        // Variáveis para o scanner
+        let canScan = true;
+        let lastScannedCode = null;
+        let lastScanTime = null;
+
+        // Variáveis para Relatórios
+        let startTime = null;
+        let endTime = null;
+        let completedReports = [];
+
         // Inicialização quando a página carrega
         window.onload = function() {
             // Verificar se há um operador salvo
@@ -1211,6 +1300,7 @@
             if (savedOperator) {
                 currentOperator = savedOperator;
                 document.getElementById('operatorModal').style.display = 'none';
+                showScreen('main-screen');
             } else {
                 document.getElementById('operatorModal').style.display = 'flex';
             }
@@ -1220,25 +1310,28 @@
             
             // Carregar produtos cadastrados
             loadRegisteredProducts();
+
+            // Carregar relatórios salvos
+            loadReports();
             
             // Configurar eventos de arrastar e soltar para upload
             const uploadArea = document.getElementById('uploadArea');
-            uploadArea.addEventListener('dragover', function(e) {
+            uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); e.target.classList.add('dragover'); });
+            uploadArea.addEventListener('dragleave', (e) => { e.target.classList.remove('dragover'); });
+            uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                uploadArea.classList.add('dragover');
+                e.target.classList.remove('dragover');
+                if (e.dataTransfer.files.length) handleDroppedFile(e.dataTransfer.files[0]);
             });
-            
-            uploadArea.addEventListener('dragleave', function() {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', function(e) {
+
+            // Configurar eventos de arrastar e soltar para importação de produtos
+            const importProductsArea = document.getElementById('importProductsArea');
+            importProductsArea.addEventListener('dragover', (e) => { e.preventDefault(); e.target.classList.add('dragover'); });
+            importProductsArea.addEventListener('dragleave', (e) => { e.target.classList.remove('dragover'); });
+            importProductsArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    handleDroppedFile(e.dataTransfer.files[0]);
-                }
+                e.target.classList.remove('dragover');
+                if (e.dataTransfer.files.length) handleProductsFileSelect({ target: e.dataTransfer });
             });
         };
         
@@ -1250,6 +1343,7 @@
                 localStorage.setItem('operator', operatorName);
                 document.getElementById('operatorModal').style.display = 'none';
                 showNotification('success', `Bem-vindo, ${operatorName}!`);
+                showScreen('main-screen');
             } else {
                 showNotification('error', 'Por favor, informe seu nome.');
             }
@@ -1283,8 +1377,15 @@
                 button.classList.remove('active');
             });
             
-            if (screenId === 'main-screen') {
-                document.querySelector('.footer-button:first-child').classList.add('active');
+            const buttonMap = {
+                'main-screen': document.querySelector('.footer-button:nth-child(1)'),
+                'separacao-pedidos': document.querySelector('.footer-button:nth-child(2)'),
+                'importacao-listas': document.querySelector('.footer-button:nth-child(3)'),
+                'relatorios': document.querySelector('.footer-button:nth-child(4)')
+            };
+
+            if (buttonMap[screenId]) {
+                buttonMap[screenId].classList.add('active');
             }
             
             // Ações específicas para cada tela
@@ -1292,25 +1393,32 @@
                 updateProductsList();
             } else if (screenId === 'adicionar-produto') {
                 loadRegisteredProducts();
+            } else if (screenId === 'relatorios') {
+                loadReports();
             }
         }
         
         // Função para lidar com a seleção de arquivo
         function handleFileSelect(event) {
             const file = event.target.files[0];
-            handleDroppedFile(file);
+            if (file && file.type === 'application/pdf') {
+                selectedFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileDetails').textContent = `Tamanho: ${Math.round(file.size / 1024)} KB`;
+                document.getElementById('filePreview').style.display = 'block';
+                showNotification('success', 'Arquivo PDF selecionado com sucesso!');
+            } else {
+                showNotification('error', 'Por favor, selecione um arquivo PDF válido.');
+            }
         }
         
         // Função para lidar com arquivo arrastado e solto
         function handleDroppedFile(file) {
             if (file && file.type === 'application/pdf') {
                 selectedFile = file;
-                
-                // Atualizar UI
                 document.getElementById('fileName').textContent = file.name;
                 document.getElementById('fileDetails').textContent = `Tamanho: ${Math.round(file.size / 1024)} KB`;
                 document.getElementById('filePreview').style.display = 'block';
-                
                 showNotification('success', 'Arquivo PDF selecionado com sucesso!');
             } else {
                 showNotification('error', 'Por favor, selecione um arquivo PDF válido.');
@@ -1324,13 +1432,10 @@
             document.getElementById('filePreview').style.display = 'none';
             document.getElementById('analysisResults').innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-search"></i>
-                    </div>
+                    <div class="empty-icon"><i class="fas fa-search"></i></div>
                     <h4>Nenhum arquivo analisado</h4>
                     <p>Faça o upload de um PDF para analisar os produtos</p>
-                </div>
-            `;
+                </div>`;
             document.getElementById('importedProductsCard').style.display = 'none';
         }
         
@@ -1340,267 +1445,245 @@
                 showNotification('error', 'Nenhum arquivo selecionado para análise.');
                 return;
             }
-            
             showNotification('success', 'Analisando PDF...');
-            
-            // Simular análise de PDF (em um caso real, usaria pdf.js para extrair texto)
             setTimeout(() => {
-                // Dados de exemplo extraídos do PDF fornecido
                 const extractedData = simulatePDFExtraction();
                 processExtractedProducts(extractedData);
             }, 1500);
         }
         
-        // Função para simular a extração de dados do PDF
-        function simulatePDFExtraction() {
-            return [
-                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
-                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
-                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 14 },
-                { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 16 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 10 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 14 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
-                { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
-                { name: "Protetor Solar Nivea Sun Babies & Kids Sensitive Fps 60 100ml", quantity: 1, code: "4005900687241" },
-                { name: "Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 1, code: "7898949409625" },
-                { name: "Gel Creme para Pentear Kolene Curvaturas 500ml", quantity: 2, code: "7908324404098" },
-                { name: "CICATRICURE - ANTISSINAIS 30G Cicatricure Creme Facial Antissinais 30g", quantity: 1 },
-                { name: "CICATRICURE - GEL P/ CICATRIZES 30G Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 2 },
-                { name: "CICATRICURE CONTORNO DE OLHOS 15G Creme Contorno Olhos Rugas Bolsas Olheiras 15g Cicatricure", quantity: 1 },
-                { name: "FACIAL 100G NUTRITIVO + NOTURNO NIVEA - Kit 2 Unidades Creme Facial 100g", quantity: 2 },
-                { name: "FACIAL NIVEA NOTURNO 100G NIVEA - Creme Facial 100g - Antissinais - Nutritivo - Noturno", quantity: 1 },
-                { name: "FACIAL NIVEA PELE NEGRA 100G NIVEA - Creme Hidratante Facial Beleza Radiante 7 em 1 - 100g", quantity: 1 },
-                { name: "H&S - SH ANTICASPA LIMP EFICAZ 400ML HEAD & SHOULDERS - Shampoo Anticaspa Limpeza Eficaz - 400ML", quantity: 1 },
-                { name: "ISACARE - LABIAL C/ 2-MELANCIA- ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-AMORA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-MELANCIA - ISACARE-AMORA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MORANGO - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 3 },
-                { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-UVA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
-                { name: "ISACARE - LABIAL-CEREJA- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
-                { name: "ISACARE - LABIAL-MELANCIA - ISACARE ISACARE - Protetor Labial FPS 15/50", quantity: 1 },
-                { name: "ISACARE - LABIAL-UVA VERDE- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
-                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
-                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 2 },
-                { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 2 },
-                { name: "KIT CICATRICURE CR 250G + GEL 30G Kit Cicatricure Antiestrias Creme 250g + Cicatricure Gel 30g", quantity: 1 },
-                { name: "KIT GOLD LIFT DIURNO + NOTURNO CICATRICURE - Kit Gold Lift Creme Noturno 50g + Creme Diurno 50g", quantity: 1 },
-                { name: "KIT TIO NACHO RECONSTRUTOR Tio Nacho Kit Reconstrutor SH 415mL + Cond 200mL", quantity: 2 },
-                { name: "NEUTROGENA - FPS 70 200ML C/ 2 NEUTROGENA - Kit com 2 Protetores Solar Corporal Sun Fresh FPS 70 200ml", quantity: 3 },
-                { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
-                { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
-                { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 5 },
-                { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 2 },
-                { name: "PANTENE - ÓLEO MILAGROSO 95ML Óleo Capilar Pantene Milagroso Queratina Leav-in 95ml", quantity: 1 },
-                { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
-                { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
-                { name: "SOLAR LOREAL EFEITO MAKE UP-2.0 Protetor Facial L'Oréal Solar Expertise FPS 70 Efeito Makeup C/ Cor 30g", quantity: 1 },
-                { name: "TONICO B3 TÔNICO CAPILAR PANTENE ANTIQUEDA BIOTINAMINA B3 52ml", quantity: 1 }
-            ];
-        }
+function simulatePDFExtraction() {
+    return [
+        { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+        { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+        { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 14 },
+        { name: "ANTISSINAIS 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 1 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 16 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 10 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 14 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+        { name: "NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+        { name: "Protetor Solar Nivea Sun Babies & Kids Sensitive Fps 60 100ml", quantity: 1, code: "4005900687241" },
+        { name: "Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 1, code: "7898949409625" },
+        { name: "Gel Creme para Pentear Kolene Curvaturas 500ml", quantity: 2, code: "7908324404098" },
+        { name: "CICATRICURE - ANTISSINAIS 30G Cicatricure Creme Facial Antissinais 30g", quantity: 1 },
+        { name: "CICATRICURE - GEL P/ CICATRIZES 30G Gel Para Cicatrizes e Estrias Para Corpo e Rosto Cicatricure 30g", quantity: 2 },
+        { name: "CICATRICURE CONTORNO DE OLHOS 15G Creme Contorno Olhos Rugas Bolsas Olheiras 15g Cicatricure", quantity: 1 },
+        { name: "FACIAL 100G NUTRITIVO + NOTURNO NIVEA - Kit 2 Unidades Creme Facial 100g", quantity: 2 },
+        { name: "FACIAL NIVEA NOTURNO 100G NIVEA - Creme Facial 100g - Antissinais - Nutritivo - Noturno", quantity: 1 },
+        { name: "FACIAL NIVEA PELE NEGRA 100G NIVEA - Creme Hidratante Facial Beleza Radiante 7 em 1 - 100g", quantity: 1 },
+        { name: "H&S - SH ANTICASPA LIMP EFICAZ 400ML HEAD & SHOULDERS - Shampoo Anticaspa Limpeza Eficaz - 400ML", quantity: 1 },
+        { name: "ISACARE - LABIAL C/ 2-MELANCIA- ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-AMORA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-CEREJA - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-MELANCIA - ISACARE-AMORA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-CEREJA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MELANCIA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-MORANGO - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 3 },
+        { name: "ISACARE - LABIAL KIT C/ 2-MORANGO - ISACARE-UVA - ISACARE ISACARE - Kit com 2 Unidades de Protetor Labial FPS 15 3,5g", quantity: 1 },
+        { name: "ISACARE - LABIAL-CEREJA- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
+        { name: "ISACARE - LABIAL-MELANCIA - ISACARE ISACARE - Protetor Labial FPS 15/50", quantity: 1 },
+        { name: "ISACARE - LABIAL-UVA VERDE- ISACARE ISACARE - Protetor Labial FPS15/50", quantity: 1 },
+        { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 1 },
+        { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Nutritivo - 50g", quantity: 2 },
+        { name: "KIT ANTISSINAIS + NUTRITIVO 50G NIVEA - Creme Facial Antissinais - 50g", quantity: 2 },
+        { name: "KIT CICATRICURE CR 250G + GEL 30G Kit Cicatricure Antiestrias Creme 250g + Cicatricure Gel 30g", quantity: 1 },
+        { name: "KIT GOLD LIFT DIURNO + NOTURNO CICATRICURE - Kit Gold Lift Creme Noturno 50g + Creme Diurno 50g", quantity: 1 },
+        { name: "KIT TIO NACHO RECONSTRUTOR Tio Nacho Kit Reconstrutor SH 415mL + Cond 200mL", quantity: 2 },
+        { name: "NEUTROGENA - FPS 70 200ML C/ 2 NEUTROGENA - Kit com 2 Protetores Solar Corporal Sun Fresh FPS 70 200ml", quantity: 3 },
+        { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
+        { name: "NIVEA - FPS 30 - 100ML NIVEA - Protetor Solar Protect & Hidrata FPS 30 - 100ml", quantity: 1 },
+        { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 5 },
+        { name: "NIVEA - KIT ANTISSINAIS 50G + FACIAL TOQ SECO FPS 70 40G Kit Nivea Protetor Solar Facial Toque Seco FPS70 40ml + Creme Facial Antissinais 50g", quantity: 2 },
+        { name: "PANTENE - ÓLEO MILAGROSO 95ML Óleo Capilar Pantene Milagroso Queratina Leav-in 95ml", quantity: 1 },
+        { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
+        { name: "SH + COND + CR PENTEAR PANTENE B3 PANTENE - Kit GRANDE Shampoo 300ml e Condicionador 250ml - Antiqueda & Nutric...", quantity: 1 },
+        { name: "SOLAR LOREAL EFEITO MAKE UP-2.0 Protetor Facial L'Oréal Solar Expertise FPS 70 Efeito Makeup C/ Cor 30g", quantity: 1 },
+        { name: "TONICO B3 TÔNICO CAPILAR PANTENE ANTIQUEDA BIOTINAMIDA B3 52ml", quantity: 1 }
+    ];
+}
+
+// Substituir a função processExtractedProducts pela versão melhorada
+function processExtractedProducts(products) {
+    // Agrupar produtos com nomes similares
+    const groupedProducts = groupSimilarProducts(products);
+    
+    // Comparar produtos extraídos com produtos cadastrados
+    importedProducts = groupedProducts.map(product => {
+        const match = findProductMatch(product, registeredProducts);
         
-        // Função para processar produtos extraídos do PDF
-        function processExtractedProducts(products) {
-            // Agrupar produtos com nomes similares
-            const groupedProducts = groupSimilarProducts(products);
-            
-            // Comparar produtos extraídos com produtos cadastrados
-            importedProducts = groupedProducts.map(product => {
-                const match = findProductMatch(product, registeredProducts);
-                
-                return {
-                    originalName: product.name,
-                    name: match ? match.name : product.name,
-                    quantity: product.quantity,
-                    code: match ? match.code : "indisponível",
-                    status: match ? "encontrado" : "não encontrado"
-                };
-            });
-            
-            // Exibir resultados da análise
-            displayAnalysisResults(importedProducts);
-            
-            // Mostrar card de produtos importados
-            document.getElementById('importedProductsCard').style.display = 'block';
-            
-            showNotification('success', `Análise concluída! ${importedProducts.length} produtos encontrados.`);
-        }
+        return {
+            originalName: product.name,
+            name: match ? match.name : product.name,
+            quantity: product.quantity,
+            code: match ? match.code : "indisponível",
+            status: match ? "encontrado" : "não encontrado"
+        };
+    });
+    
+    // Exibir resultados da análise
+    displayAnalysisResults(importedProducts);
+    
+    // Mostrar card de produtos importados
+    document.getElementById('importedProductsCard').style.display = 'block';
+    
+    showNotification('success', `Análise concluída! ${importedProducts.length} produtos encontrados.`);
+}
+
+// Substituir a função groupSimilarProducts pela versão melhorada
+function groupSimilarProducts(products) {
+    const grouped = {};
+    
+    products.forEach(product => {
+        const normalizedName = normalizeProductName(product.name);
         
-        // Função para agrupar produtos similares
-        function groupSimilarProducts(products) {
-            const grouped = {};
-            
-            products.forEach(product => {
-                const normalizedName = normalizeProductName(product.name);
-                
-                if (grouped[normalizedName]) {
-                    grouped[normalizedName].quantity += product.quantity;
-                } else {
-                    grouped[normalizedName] = {
-                        name: product.name,
-                        quantity: product.quantity,
-                        code: product.code || "indisponível"
-                    };
-                }
-            });
-            
-            return Object.values(grouped);
+        if (grouped[normalizedName]) {
+            grouped[normalizedName].quantity += product.quantity;
+        } else {
+            grouped[normalizedName] = {
+                name: product.name,
+                quantity: product.quantity,
+                code: product.code || "indisponível"
+            };
         }
+    });
+    
+    return Object.values(grouped);
+}
+
+// Substituir a função normalizeProductName pela versão melhorada
+function normalizeProductName(name) {
+    return name.trim()
+        .toUpperCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remover acentos
+        .replace(/[^A-Z0-9\s]/g, '') // Remover caracteres especiais
+        .replace(/\s+/g, ' ') // Remover espaços múltiplos
+        .replace(/^\d+\*UND\s*/i, '') // Remover prefixos como "01*UND"
+        .replace(/\s×\s*\d+$/, ''); // Remover sufixos de quantidade
+}
+
+// Substituir a função findProductMatch pela versão melhorada
+function findProductMatch(importedProduct, registeredProducts) {
+    const normalizedImported = normalizeProductName(importedProduct.name);
+    
+    // Primeiro, tentar encontrar por código
+    if (importedProduct.code !== "indisponível") {
+        const codeMatch = registeredProducts.find(p => p.code === importedProduct.code);
+        if (codeMatch) return codeMatch;
+    }
+    
+    // Depois, tentar encontrar correspondência exata no nome
+    let match = registeredProducts.find(p => 
+        normalizeProductName(p.name) === normalizedImported
+    );
+    
+    if (match) return match;
+    
+    // Se não encontrar correspondência exata, procurar por palavras-chave
+    const importedWords = normalizedImported.split(' ').filter(word => word.length > 2);
+    
+    for (const registeredProduct of registeredProducts) {
+        const normalizedRegistered = normalizeProductName(registeredProduct.name);
+        const registeredWords = normalizedRegistered.split(' ').filter(word => word.length > 2);
         
-        // Função para normalizar o nome do produto
-        function normalizeProductName(name) {
-            return name.trim()
-                .toUpperCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remover acentos
-                .replace(/[^A-Z0-9\s]/g, '') // Remover caracteres especiais
-                .replace(/\s+/g, ' ') // Remover espaços múltiplos
-                .replace(/^\d+\*UND\s*/i, '') // Remover prefixos como "01*UND"
-                .replace(/\s×\s*\d+$/, ''); // Remover sufixos de quantidade
+        // Verificar se há sobreposição significativa de palavras
+        const commonWords = importedWords.filter(word => 
+            registeredWords.includes(word)
+        );
+        
+        // Se houver pelo menos 2 palavras em comum, considerar como correspondência
+        if (commonWords.length >= 2) {
+            return registeredProduct;
         }
-        
-        // Função para encontrar correspondência de produto
-        function findProductMatch(importedProduct, registeredProducts) {
-            const normalizedImported = normalizeProductName(importedProduct.name);
-            
-            // Primeiro, tentar encontrar por código
-            if (importedProduct.code !== "indisponível") {
-                const codeMatch = registeredProducts.find(p => p.code === importedProduct.code);
-                if (codeMatch) return codeMatch;
-            }
-            
-            // Depois, tentar encontrar correspondência exata no nome
-            let match = registeredProducts.find(p => 
-                normalizeProductName(p.name) === normalizedImported
-            );
-            
-            if (match) return match;
-            
-            // Se não encontrar correspondência exata, procurar por palavras-chave
-            const importedWords = normalizedImported.split(' ').filter(word => word.length > 2);
-            
-            for (const registeredProduct of registeredProducts) {
-                const normalizedRegistered = normalizeProductName(registeredProduct.name);
-                const registeredWords = normalizedRegistered.split(' ').filter(word => word.length > 2);
-                
-                // Verificar se há sobreposição significativa de palavras
-                const commonWords = importedWords.filter(word => 
-                    registeredWords.includes(word)
-                );
-                
-                // Se houver pelo menos 2 palavras em comum, considerar como correspondência
-                if (commonWords.length >= 2) {
-                    return registeredProduct;
-                }
-            }
-            
-            // Se nenhuma correspondência for encontrada
-            return null;
-        }
-        
-        // Função para exibir resultados da análise
-        function displayAnalysisResults(products) {
-            const resultsContainer = document.getElementById('analysisResults');
-            const previewContainer = document.getElementById('productPreview');
-            
-            if (products.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h4>Nenhum produto encontrado</h4>
-                        <p>O PDF não contém produtos reconhecíveis</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = `
-                <div class="progress-container">
-                    <h4>Resumo da Análise</h4>
-                    <div class="progress-count">
-                        <div class="count-item">
-                            <span class="count-value">${products.length}</span>
-                            <span class="count-label">Total</span>
-                        </div>
-                        <div class="count-item">
-                            <span class="count-value count-completed">${products.filter(p => p.status === 'encontrado').length}</span>
-                            <span class="count-label">Encontrados</span>
-                        </div>
-                        <div class="count-item">
-                            <span class="count-value count-pending">${products.filter(p => p.status === 'não encontrado').length}</span>
-                            <span class="count-label">Não Encontrados</span>
-                        </div>
-                    </div>
+    }
+    
+    // Se nenhuma correspondência for encontrada
+    return null;
+}
+
+// Substituir a função displayAnalysisResults pela versão melhorada
+function displayAnalysisResults(products) {
+    const resultsContainer = document.getElementById('analysisResults');
+    const previewContainer = document.getElementById('productPreview');
+    
+    if (products.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${(products.filter(p => p.status === 'encontrado').length / products.length) * 100}%"></div>
+                <h4>Nenhum produto encontrado</h4>
+                <p>O PDF não contém produtos reconhecíveis</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="progress-container">
+            <h4>Resumo da Análise</h4>
+            <div class="progress-count">
+                <div class="count-item">
+                    <span class="count-value">${products.length}</span>
+                    <span class="count-label">Total</span>
                 </div>
-            `;
-            
-            resultsContainer.innerHTML = html;
-            
-            // Atualizar prévia dos produtos
-            previewContainer.innerHTML = '';
-            products.forEach(product => {
-                const productElement = document.createElement('div');
-                productElement.className = 'product-preview-item';
-                productElement.innerHTML = `
-                    <div>
-                        <strong>${product.name}</strong>
-                        <div>Quantidade: ${product.quantity} • Código: ${product.code}</div>
-                    </div>
-                    <span class="product-match ${product.status === 'encontrado' ? 'match-found' : 'match-notfound'}">
-                        ${product.status === 'encontrado' ? '✓' : '✗'}
-                    </span>
-                `;
-                previewContainer.appendChild(productElement);
-            });
-        }
+                <div class="count-item">
+                    <span class="count-value count-completed">${products.filter(p => p.status === 'encontrado').length}</span>
+                    <span class="count-label">Encontrados</span>
+                </div>
+                <div class="count-item">
+                    <span class="count-value count-pending">${products.filter(p => p.status === 'não encontrado').length}</span>
+                    <span class="count-label">Não Encontrados</span>
+                </div>
+            </div>
+        </div>
         
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: ${(products.filter(p => p.status === 'encontrado').length / products.length) * 100}%"></div>
+        </div>
+    `;
+    
+    resultsContainer.innerHTML = html;
+    
+    // Atualizar prévia dos produtos
+    previewContainer.innerHTML = '';
+    products.forEach(product => {
+        const productElement = document.createElement('div');
+        productElement.className = 'product-preview-item';
+        productElement.innerHTML = `
+            <div>
+                <strong>${product.name}</strong>
+                <div>Quantidade: ${product.quantity} • Código: ${product.code}</div>
+            </div>
+            <span class="product-match ${product.status === 'encontrado' ? 'match-found' : 'match-notfound'}">
+                ${product.status === 'encontrado' ? '✓' : '✗'}
+            </span>
+        `;
+        previewContainer.appendChild(productElement);
+    });
+}
         // Função para salvar lista importada
         function saveImportedList() {
             if (importedProducts.length === 0) {
                 showNotification('error', 'Nenhum produto para salvar.');
                 return;
             }
-            
-            const listName = document.getElementById('listName').value.trim() || 
-                            `Lista_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}`;
-            
-            // Converter produtos importados para o formato da lista
-            const listProducts = importedProducts.map(product => ({
-                name: product.name,
-                code: product.code,
-                quantity: product.quantity,
+            const listName = document.getElementById('listName').value.trim() || `Lista_${new Date().toLocaleDateString()}`;
+            const listProducts = importedProducts.map(p => ({
+                name: p.name,
+                code: p.code,
+                isKit: p.isKit,
+                kitCodes: p.kitCodes,
+                quantity: p.quantity,
                 separated: 0
             }));
-            
-            // Salvar lista
-            lists[listName] = {
-                name: listName,
-                products: listProducts,
-                date: new Date().toISOString()
-            };
-            
+            lists[listName] = { name: listName, products: listProducts, date: new Date().toISOString() };
             localStorage.setItem('lists', JSON.stringify(lists));
-            
-            // Atualizar seletor de listas
             updateListSelector();
-            
             showNotification('success', `Lista "${listName}" salva com sucesso!`);
-            
-            // Limpar importação
             clearFile();
-            document.getElementById('importedProductsCard').style.display = 'none';
-            importedProducts = [];
         }
         
         // Função para carregar listas salvas
@@ -1611,25 +1694,15 @@
         // Função para atualizar o seletor de listas
         function updateListSelector() {
             const listSelector = document.getElementById('lista-selecionada');
-            
-            // Salvar seleção atual
             const currentSelection = listSelector.value;
-            
-            // Limpar opções existentes (exceto a primeira)
-            while (listSelector.options.length > 1) {
-                listSelector.remove(1);
-            }
-            
-            // Adicionar listas salvas
+            while (listSelector.options.length > 1) listSelector.remove(1);
             Object.keys(lists).forEach(listName => {
                 const option = document.createElement('option');
                 option.value = listName;
                 option.textContent = listName;
                 listSelector.appendChild(option);
             });
-            
-            // Restaurar seleção anterior, se ainda existir
-            if (currentSelection && Array.from(listSelector.options).some(opt => opt.value === currentSelection)) {
+            if (currentSelection && lists[currentSelection]) {
                 listSelector.value = currentSelection;
             }
         }
@@ -1637,11 +1710,11 @@
         // Função para carregar a lista selecionada
         function loadSelectedList() {
             const listName = document.getElementById('lista-selecionada').value;
-            
             if (listName && lists[listName]) {
                 currentList = lists[listName];
                 updateProductsList();
                 document.getElementById('finish-button').disabled = true;
+                startTime = null;
             } else {
                 currentList = null;
                 document.getElementById('products-list').innerHTML = '<p>Selecione uma lista para começar</p>';
@@ -1654,28 +1727,17 @@
             const pendingCount = document.getElementById('pending-count');
             const completedCount = document.getElementById('completed-count');
             const progressFill = document.getElementById('progress-fill');
-            
             if (!currentList || !currentList.products) {
                 productsList.innerHTML = '<p>Nenhum produto na lista</p>';
                 return;
             }
-            
-            let pending = 0;
-            let completed = 0;
-            
+            let totalToSeparate = 0, totalSeparated = 0;
             productsList.innerHTML = '';
-            
             currentList.products.forEach((product, index) => {
+                totalToSeparate += product.quantity;
+                totalSeparated += product.separated;
                 const isCompleted = product.separated >= product.quantity;
-                
-                if (isCompleted) {
-                    completed++;
-                } else {
-                    pending++;
-                }
-                
-                const progressPercent = (product.separated / product.quantity) * 100;
-                
+                const progressPercent = product.quantity > 0 ? (product.separated / product.quantity) * 100 : 0;
                 const productElement = document.createElement('div');
                 productElement.className = 'product-item';
                 productElement.innerHTML = `
@@ -1685,51 +1747,32 @@
                             <strong>${product.name}</strong>
                             <div class="product-quantity">
                                 <span>${product.separated}/${product.quantity}</span>
-                                <div class="quantity-progress">
-                                    <div class="quantity-progress-fill" style="width: ${progressPercent}%"></div>
-                                </div>
+                                <div class="quantity-progress"><div class="quantity-progress-fill" style="width: ${progressPercent}%"></div></div>
                             </div>
                         </div>
                     </div>
                     <div class="manual-quantity-controls">
                         <button class="quantity-btn remove" onclick="manualRemoveUnit(${index})">-</button>
                         <button class="quantity-btn" onclick="manualAddUnit(${index})">+</button>
-                    </div>
-                `;
-                
+                    </div>`;
                 productsList.appendChild(productElement);
             });
-            
-            // Atualizar contadores
-            pendingCount.textContent = pending;
-            completedCount.textContent = completed;
-            
-            // Atualizar barra de progresso
-            const total = pending + completed;
-            const progress = total > 0 ? (completed / total) * 100 : 0;
-            progressFill.style.width = `${progress}%`;
-            
-            // Atualizar botão de finalizar
-            document.getElementById('finish-button').disabled = pending > 0;
+            pendingCount.textContent = totalToSeparate - totalSeparated;
+            completedCount.textContent = totalSeparated;
+            progressFill.style.width = `${totalToSeparate > 0 ? (totalSeparated / totalToSeparate) * 100 : 0}%`;
+            checkCompletion();
         }
         
         // Função para adicionar unidade manualmente
         function manualAddUnit(index) {
             if (currentList && currentList.products && currentList.products[index]) {
+                if (!startTime) startTime = new Date();
                 const product = currentList.products[index];
-                
                 if (product.separated < product.quantity) {
                     product.separated++;
-                    
-                    // Atualizar localStorage
                     lists[currentList.name] = currentList;
                     localStorage.setItem('lists', JSON.stringify(lists));
-                    
-                    // Atualizar UI
                     updateProductsList();
-                    
-                    // Verificar se todos os itens foram separados
-                    checkCompletion();
                 } else {
                     showNotification('warning', `Quantidade máxima já separada para "${product.name}".`);
                 }
@@ -1738,70 +1781,41 @@
         
         // Função para remover unidade manualmente
         function manualRemoveUnit(index) {
-            if (currentList && currentList.products && currentList.products[index]) {
-                const product = currentList.products[index];
-                
-                if (product.separated > 0) {
-                    product.separated--;
-                    
-                    // Atualizar localStorage
-                    lists[currentList.name] = currentList;
-                    localStorage.setItem('lists', JSON.stringify(lists));
-                    
-                    // Atualizar UI
-                    updateProductsList();
-                } else {
-                    showNotification('warning', `Não há unidades separadas de "${product.name}" para remover.`);
-                }
+            if (currentList?.products?.[index]?.separated > 0) {
+                currentList.products[index].separated--;
+                lists[currentList.name] = currentList;
+                localStorage.setItem('lists', JSON.stringify(lists));
+                updateProductsList();
             }
         }
         
         // Função para verificar se a separação foi concluída
         function checkCompletion() {
-            if (currentList && currentList.products) {
-                const pending = currentList.products.reduce((total, product) => {
-                    return total + (product.quantity - product.separated);
-                }, 0);
-                
-                if (pending === 0) {
-                    document.getElementById('finish-button').disabled = false;
-                    showNotification('success', 'Todos os itens foram separados!');
-                }
+            if (currentList?.products) {
+                const allSeparated = currentList.products.every(p => p.separated >= p.quantity);
+                document.getElementById('finish-button').disabled = !allSeparated;
+                if (allSeparated) showNotification('success', 'Todos os itens foram separados!');
             }
         }
         
         // Função para finalizar a separação
         function finishSeparation() {
             if (currentList) {
-                // Registrar no histórico
-                const history = JSON.parse(localStorage.getItem('separationHistory')) || [];
-                history.push({
-                    date: new Date().toISOString(),
-                    list: currentList.name,
-                    operator: currentOperator,
-                    items: currentList.products.reduce((total, product) => total + product.quantity, 0)
-                });
-                
-                localStorage.setItem('separationHistory', JSON.stringify(history));
-                
-                // Limpar lista atual
+                endTime = new Date();
+                saveReport();
+                showReport();
                 currentList = null;
-                
-                showNotification('success', 'Separação concluída com sucesso!');
-                showScreen('main-screen');
+                startTime = null;
+                endTime = null;
             }
         }
         
         // Função para iniciar a separação de itens
-        function startSeparation() {
-            showScreen('separacao-itens');
-        }
+        function startSeparation() { showScreen('separacao-itens'); }
         
-        // Função para cancelar a separação e voltar ao menu
+        // Função para cancelar a separação
         function cancelSeparation() {
-            if (scannerActive) {
-                stopBarcodeScanner();
-            }
+            if (scannerActive) stopBarcodeScanner();
             showScreen('main-screen');
         }
         
@@ -1809,173 +1823,267 @@
         function addProduct() {
             const name = document.getElementById('product-name').value.trim();
             const code = document.getElementById('product-code').value.trim();
-            
-            if (!name) {
-                showNotification('error', 'Por favor, informe o nome do produto.');
+            if (!name || !code) {
+                showNotification('error', 'Nome e código são obrigatórios.');
                 return;
             }
-            
-            if (!code) {
-                showNotification('error', 'Por favor, informe o código do produto.');
-                return;
-            }
-            
-            // Verificar se o produto já existe
             if (registeredProducts.some(p => p.code === code)) {
-                showNotification('error', 'Já existe um produto com este código.');
+                showNotification('error', 'Produto com este código já existe.');
                 return;
             }
-            
-            // Adicionar produto
-            registeredProducts.push({ name, code });
-            
-            // Salvar no localStorage
-            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
-            
-            // Limpar formulário
+            registeredProducts.push({ name, code, isKit: false });
+            saveRegisteredProducts();
             document.getElementById('product-name').value = '';
             document.getElementById('product-code').value = '';
-            
-            showNotification('success', 'Produto adicionado com sucesso!');
-            
-            // Atualizar lista de produtos
+            showNotification('success', 'Produto adicionado!');
             loadRegisteredProducts();
         }
         
+        // Funções de importação de produtos
+        function handleProductsFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = e => document.getElementById('products-content-import').value = e.target.result;
+                reader.readAsText(file);
+            } else {
+                showNotification('error', 'Selecione um arquivo TXT.');
+            }
+        }
+
+        function importProducts() {
+            const content = document.getElementById('products-content-import').value.trim();
+            if (!content) return;
+            let importedCount = 0, skippedCount = 0;
+            content.split('\n').forEach(line => {
+                const parts = line.split(',');
+                if (parts.length < 2) return;
+                const name = parts.shift().trim();
+                const codePart = parts.join(',').trim();
+                if (!name || !codePart) return;
+                
+                const isKit = codePart.includes('/');
+                let product, exists;
+                if (isKit) {
+                    const kitCodes = codePart.split('/').map(c => c.trim());
+                    exists = kitCodes.some(kc => registeredProducts.some(p => (p.isKit && p.kitCodes.includes(kc)) || p.code === kc));
+                    if (!exists) product = { name, code: kitCodes[0], isKit: true, kitCodes };
+                } else {
+                    exists = registeredProducts.some(p => (p.isKit && p.kitCodes.includes(codePart)) || p.code === codePart);
+                    if (!exists) product = { name, code: codePart, isKit: false };
+                }
+
+                if (product) {
+                    registeredProducts.push(product);
+                    importedCount++;
+                } else {
+                    skippedCount++;
+                }
+            });
+            if (importedCount > 0) {
+                saveRegisteredProducts();
+                loadRegisteredProducts();
+                showNotification('success', `${importedCount} produtos importados. ${skippedCount} ignorados.`);
+            } else {
+                showNotification('warning', 'Nenhum produto novo importado.');
+            }
+        }
+
+        function saveRegisteredProducts() {
+            localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
+        }
+
         // Função para carregar produtos cadastrados
         function loadRegisteredProducts() {
-            const productsContainer = document.getElementById('products-list-registered');
-            
+            const container = document.getElementById('products-list-registered');
+            container.innerHTML = '';
             if (registeredProducts.length === 0) {
-                productsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-box-open"></i>
-                        </div>
-                        <h4>Nenhum produto cadastrado</h4>
-                        <p>Adicione produtos para começar</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="empty-state">...</div>`;
                 return;
             }
-            
-            let html = '';
-            registeredProducts.forEach(product => {
-                html += `
+            registeredProducts.forEach(p => {
+                const codeDisplay = p.isKit ? `Código(s): ${p.kitCodes.join(', ')}` : `Código: ${p.code}`;
+                container.innerHTML += `
                     <div class="list-item">
-                        <div>
-                            <strong>${product.name}</strong>
-                            <div>Código: ${product.code}</div>
-                        </div>
-                        <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
+                        <div><strong>${p.name}</strong><div>${codeDisplay}</div></div>
+                        <button class="action-btn btn-delete" onclick="deleteProduct('${p.code}')"><i class="fas fa-trash"></i></button>
+                    </div>`;
             });
-            
-            productsContainer.innerHTML = html;
         }
         
         // Função para buscar produtos
         function searchProducts(query) {
-            const filteredProducts = registeredProducts.filter(product => 
-                product.name.toLowerCase().includes(query.toLowerCase()) || 
-                product.code.toLowerCase().includes(query.toLowerCase())
+            const container = document.getElementById('products-list-registered');
+            const lowerQuery = query.toLowerCase();
+            const filtered = registeredProducts.filter(p => 
+                p.name.toLowerCase().includes(lowerQuery) || p.code.toLowerCase().includes(lowerQuery) ||
+                (p.isKit && p.kitCodes.some(kc => kc.toLowerCase().includes(lowerQuery)))
             );
-            
-            const productsContainer = document.getElementById('products-list-registered');
-            
-            if (filteredProducts.length === 0) {
-                productsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <h4>Nenhum produto encontrado</h4>
-                        <p>Tente usar outros termos de busca</p>
-                    </div>
-                `;
-                return;
+            container.innerHTML = '';
+            if (filtered.length > 0) {
+                filtered.forEach(p => {
+                    const codeDisplay = p.isKit ? `Código(s): ${p.kitCodes.join(', ')}` : `Código: ${p.code}`;
+                    container.innerHTML += `
+                        <div class="list-item">
+                            <div><strong>${p.name}</strong><div>${codeDisplay}</div></div>
+                            <button class="action-btn btn-delete" onclick="deleteProduct('${p.code}')"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                });
+            } else {
+                container.innerHTML = `<div class="empty-state"><h4>Nenhum produto encontrado</h4></div>`;
             }
-            
-            let html = '';
-            filteredProducts.forEach(product => {
-                html += `
-                    <div class="list-item">
-                        <div>
-                            <strong>${product.name}</strong>
-                            <div>Código: ${product.code}</div>
-                        </div>
-                        <button class="action-btn btn-delete" onclick="deleteProduct('${product.code}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-            });
-            
-            productsContainer.innerHTML = html;
         }
         
         // Função para excluir produto
         function deleteProduct(code) {
-            if (confirm('Tem certeza que deseja excluir este produto?')) {
+            if (confirm('Tem certeza?')) {
                 registeredProducts = registeredProducts.filter(p => p.code !== code);
-                localStorage.setItem('registeredProducts', JSON.stringify(registeredProducts));
+                saveRegisteredProducts();
                 loadRegisteredProducts();
-                showNotification('success', 'Produto excluído com sucesso.');
+                showNotification('success', 'Produto excluído.');
             }
         }
         
-        // Funções do scanner de código de barras (simuladas)
+        // Funções do scanner de código de barras
         function initBarcodeScanner() {
-            showNotification('success', 'Scanner de código de barras ativado!');
-            document.getElementById('scanner-placeholder').style.display = 'none';
-            document.getElementById('start-scanner').classList.add('inactive');
-            document.getElementById('stop-scanner').classList.remove('inactive');
-            scannerActive = true;
+            if (scannerActive) return;
+            const scannerPlaceholder = document.getElementById('scanner-placeholder');
+            scannerPlaceholder.style.display = 'none';
+            Quagga.init({
+                inputStream: { name: "Live", type: "LiveStream", target: '#barcode-scanner', constraints: { width: 480, height: 320, facingMode: "environment" }},
+                decoder: { readers: ["code_128_reader", "ean_reader"] }
+            }, err => {
+                if (err) {
+                    showNotification('error', 'Erro ao iniciar câmera.');
+                    scannerPlaceholder.style.display = 'flex';
+                    return;
+                }
+                scannerActive = true;
+                document.getElementById('start-scanner').classList.add('inactive');
+                document.getElementById('stop-scanner').classList.remove('inactive');
+                Quagga.start();
+            });
+            Quagga.onDetected(result => {
+                if (!canScan) return;
+                const code = result.codeResult.code;
+                canScan = false;
+                setTimeout(() => canScan = true, 1000);
+                processScannedBarcode(code);
+            });
         }
-        
         function stopBarcodeScanner() {
-            showNotification('info', 'Scanner de código de barras desativado.');
-            document.getElementById('scanner-placeholder').style.display = 'flex';
-            document.getElementById('start-scanner').classList.remove('inactive');
-            document.getElementById('stop-scanner').classList.add('inactive');
-            scannerActive = false;
-        }
-        
-        function handleBarcodeInput(event) {
-            if (event.key === 'Enter') {
-                processBarcode();
+            if (scannerActive) {
+                Quagga.stop();
+                scannerActive = false;
+                document.getElementById('scanner-placeholder').style.display = 'flex';
+                document.getElementById('start-scanner').classList.remove('inactive');
+                document.getElementById('stop-scanner').classList.add('inactive');
             }
         }
-        
-        function processBarcode() {
-            const barcodeInput = document.getElementById('barcode-input');
-            const code = barcodeInput.value.trim();
-            
-            if (code) {
-                // Simular processamento de código de barras
-                showNotification('success', `Código ${code} processado!`);
-                barcodeInput.value = '';
-                
-                // Em uma implementação real, aqui você processaria o código
-                // e atualizaria a lista de produtos
+        function processScannedBarcode(scannedCode) {
+            if (!currentList) {
+                showNotification('error', 'Nenhuma lista selecionada.');
+                return;
+            }
+            const productIndex = currentList.products.findIndex(p => (p.isKit && p.kitCodes.includes(scannedCode)) || p.code === scannedCode);
+            if (productIndex !== -1) {
+                manualAddUnit(productIndex);
+                showNotification('success', `Código ${scannedCode} processado!`);
             } else {
-                showNotification('error', 'Por favor, digite um código.');
+                showNotification('error', `Produto com código ${scannedCode} não encontrado.`);
+            }
+        }
+        function handleBarcodeInput(event) { if (event.key === 'Enter') processBarcode(); }
+        function processBarcode() {
+            const input = document.getElementById('barcode-input');
+            if (input.value.trim()) {
+                processScannedBarcode(input.value.trim());
+                input.value = '';
             }
         }
         
         // Funções de filtro e ordenação
-        function filterProducts(filter) {
-            // Esta função seria implementada para filtrar os produtos na lista
-            showNotification('info', `Filtrando por: ${filter}`);
+        function filterProducts(filter) { showNotification('info', `Filtro: ${filter}`); }
+        function sortProducts(criteria) { showNotification('info', `Ordenado por: ${criteria}`); }
+
+        // Funções de Relatório
+        function saveReport() {
+            const timeDiff = endTime - startTime;
+            const report = {
+                id: Date.now(),
+                operator: currentOperator,
+                listName: currentList.name,
+                date: new Date().toLocaleDateString('pt-BR'),
+                startTime: startTime.toLocaleTimeString('pt-BR'),
+                endTime: endTime.toLocaleTimeString('pt-BR'),
+                duration: `${Math.floor(timeDiff / 60000)}min ${Math.floor((timeDiff % 60000) / 1000)}s`,
+                itemsProcessed: `${currentList.products.reduce((t, p) => t + p.separated, 0)}/${currentList.products.reduce((t, p) => t + p.quantity, 0)}`,
+                efficiency: `${Math.round((currentList.products.reduce((t, p) => t + p.separated, 0) / currentList.products.reduce((t, p) => t + p.quantity, 0)) * 100)}%`,
+                products: currentList.products
+            };
+            const reports = JSON.parse(localStorage.getItem('completedReports') || '[]');
+            reports.push(report);
+            localStorage.setItem('completedReports', JSON.stringify(reports));
+            completedReports = reports;
         }
-        
-        function sortProducts(criteria) {
-            // Esta função seria implementada para ordenar os produtos na lista
-            showNotification('info', `Ordenando por: ${criteria}`);
+        function loadReports() {
+            const container = document.getElementById('reports-list');
+            const reports = JSON.parse(localStorage.getItem('completedReports') || '[]');
+            completedReports = reports;
+            container.innerHTML = '';
+            if (reports.length === 0) {
+                container.innerHTML = `<div class="empty-state">Nenhum relatório.</div>`;
+                return;
+            }
+            reports.sort((a, b) => b.id - a.id).forEach(r => {
+                container.innerHTML += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${r.listName}</div>
+                            <div class="file-details">${r.date} • ${r.duration}</div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="action-btn btn-view" onclick="viewReport(${r.id})"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>`;
+            });
+        }
+        function viewReport(reportId) {
+            const report = completedReports.find(r => r.id === reportId);
+            if (!report) return;
+            document.getElementById('report-responsavel').textContent = report.operator;
+            document.getElementById('report-data').textContent = report.date;
+            document.getElementById('report-inicio').textContent = report.startTime;
+            document.getElementById('report-termino').textContent = report.endTime;
+            document.getElementById('report-tempo').textContent = report.duration;
+            document.getElementById('report-itens').textContent = report.itemsProcessed;
+            document.getElementById('report-eficiencia').textContent = report.efficiency;
+            document.getElementById('reportModal').setAttribute('data-current-report', reportId);
+            document.getElementById('reportModal').style.display = 'flex';
+        }
+        function exportReport() {
+            const reportId = parseInt(document.getElementById('reportModal').getAttribute('data-current-report'));
+            const report = completedReports.find(r => r.id === reportId);
+            if (!report) return;
+            let text = `Relatório - ${report.listName}\n========================\n`;
+            text += `Operador: ${report.operator}\nData: ${report.date}\n`;
+            text += `Duração: ${report.duration}\nItens: ${report.itemsProcessed}\n\n`;
+            report.products.forEach(p => text += `- ${p.name}: ${p.separated}/${p.quantity}\n`);
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `relatorio-${report.id}.txt`;
+            a.click();
+        }
+        function closeReport() {
+            document.getElementById('reportModal').style.display = 'none';
+            showScreen('main-screen');
+        }
+        function showReport() {
+            const reportId = completedReports[completedReports.length - 1]?.id || Date.now();
+            viewReport(reportId);
         }
     </script>
 </body>
 </html>
+}
