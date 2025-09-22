@@ -928,14 +928,14 @@
                     <p>Registro de separação individual de produtos</p>
                 </div>
                 
-                <div class="menu-item" onclick="showScreen('separacao-pedidos')">
-                    <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="menu-item" onclick="alert('EM DESENVOLVIMENTO')">
+                    <div class="icon"><i class="fas fa-clipboard-list" style="color: var(--danger-color);"></i></div>
                     <h2>Separação de Pedidos</h2>
                     <p>Controle completo de pedidos</p>
                 </div>
                 
-                <div class="menu-item" onclick="showScreen('confecao-pedidos')">
-                    <div class="icon"><i class="fas fa-tasks"></i></div>
+                <div class="menu-item" onclick="alert('EM DESENVOLVIMENTO')">
+                    <div class="icon"><i class="fas fa-tasks" style="color: var(--danger-color);"></i></div>
                     <h2>Confecção de Pedidos</h2>
                     <p>Preparação de pedidos</p>
                 </div>
@@ -1027,11 +1027,11 @@
                 </div>
                 
                 <div class="filter-buttons">
-                    <button class="filter-button active" onclick="filterProducts('all')">Todos</button>
-                    <button class="filter-button" onclick="filterProducts('pending')">Pendentes</button>
-                    <button class="filter-button" onclick="filterProducts('completed')">Concluídos</button>
-                    <button class="filter-button" onclick="sortProducts('name')">Ordenar por Nome</button>
-                    <button class="filter-button" onclick="sortProducts('quantity')">Ordenar por Quantidade</button>
+                    <button class="filter-button active" onclick="filterProducts('all', this)">Todos</button>
+                    <button class="filter-button" onclick="filterProducts('pending', this)">Pendentes</button>
+                    <button class="filter-button" onclick="filterProducts('completed', this)">Concluídos</button>
+                    <button class="filter-button" onclick="sortProducts('name', this)">Ordenar por Nome</button>
+                    <button class="filter-button" onclick="sortProducts('quantity', this)">Ordenar por Quantidade</button>
                 </div>
                 
                 <div id="products-list">
@@ -1247,7 +1247,7 @@
             <span>Início</span>
         </button>
         
-        <button class="footer-button" onclick="showScreen('separacao-pedidos')">
+        <button class="footer-button" onclick="alert('EM DESENVOLVIMENTO')">
             <i class="fas fa-clipboard-list"></i>
             <span>Pedidos</span>
         </button>
@@ -1282,6 +1282,7 @@
         let scannerActive = false;
         let importedProducts = [];
         let registeredProducts = JSON.parse(localStorage.getItem('registeredProducts')) || [];
+        let currentFilter = 'all';
         
         // Variáveis para o scanner
         let canScan = true;
@@ -1712,6 +1713,12 @@ function displayAnalysisResults(products) {
             const listName = document.getElementById('lista-selecionada').value;
             if (listName && lists[listName]) {
                 currentList = lists[listName];
+                
+                // Redefinir filtro e botões ao carregar uma nova lista
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-buttons .filter-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-buttons button[onclick^="filterProducts(\'all\'"]').classList.add('active');
+                
                 updateProductsList();
                 document.getElementById('finish-button').disabled = true;
                 startTime = null;
@@ -1731,12 +1738,23 @@ function displayAnalysisResults(products) {
                 productsList.innerHTML = '<p>Nenhum produto na lista</p>';
                 return;
             }
+            
             let totalToSeparate = 0, totalSeparated = 0;
             productsList.innerHTML = '';
+            
             currentList.products.forEach((product, index) => {
                 totalToSeparate += product.quantity;
                 totalSeparated += product.separated;
                 const isCompleted = product.separated >= product.quantity;
+
+                // Aplica o filtro de visualização
+                if (currentFilter === 'pending' && isCompleted) {
+                    return; // Pula a renderização de itens concluídos se o filtro for "pendentes"
+                }
+                if (currentFilter === 'completed' && !isCompleted) {
+                    return; // Pula a renderização de itens pendentes se o filtro for "concluídos"
+                }
+
                 const progressPercent = product.quantity > 0 ? (product.separated / product.quantity) * 100 : 0;
                 const productElement = document.createElement('div');
                 productElement.className = 'product-item';
@@ -1757,6 +1775,7 @@ function displayAnalysisResults(products) {
                     </div>`;
                 productsList.appendChild(productElement);
             });
+            
             pendingCount.textContent = totalToSeparate - totalSeparated;
             completedCount.textContent = totalSeparated;
             progressFill.style.width = `${totalToSeparate > 0 ? (totalSeparated / totalToSeparate) * 100 : 0}%`;
@@ -1779,7 +1798,7 @@ function displayAnalysisResults(products) {
             }
         }
         
-        // Função para remover unidade manualmente
+        // Função para remover unidade manually
         function manualRemoveUnit(index) {
             if (currentList?.products?.[index]?.separated > 0) {
                 currentList.products[index].separated--;
@@ -2003,8 +2022,33 @@ function displayAnalysisResults(products) {
         }
         
         // Funções de filtro e ordenação
-        function filterProducts(filter) { showNotification('info', `Filtro: ${filter}`); }
-        function sortProducts(criteria) { showNotification('info', `Ordenado por: ${criteria}`); }
+        function filterProducts(filter, element) {
+            currentFilter = filter;
+            // Atualiza a classe 'active' para os botões de filtro
+            const filterButtons = document.querySelectorAll('.filter-buttons button[onclick^="filterProducts"]');
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            updateProductsList();
+        }
+
+        function sortProducts(criteria, element) {
+            if (!currentList || !currentList.products) {
+                showNotification('error', 'Nenhuma lista selecionada para ordenar.');
+                return;
+            }
+            if (criteria === 'name') {
+                currentList.products.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (criteria === 'quantity') {
+                currentList.products.sort((a, b) => b.quantity - a.quantity);
+            }
+            // Atualiza a classe 'active' para os botões de ordenação
+            const sortButtons = document.querySelectorAll('.filter-buttons button[onclick^="sortProducts"]');
+            sortButtons.forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            
+            showNotification('success', `Lista ordenada por ${criteria === 'name' ? 'Nome' : 'Quantidade'}.`);
+            updateProductsList();
+        }
 
         // Funções de Relatório
         function saveReport() {
@@ -2086,4 +2130,3 @@ function displayAnalysisResults(products) {
     </script>
 </body>
 </html>
-}
