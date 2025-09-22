@@ -1968,12 +1968,41 @@ function displayAnalysisResults(products) {
             if (scannerActive) return;
             const scannerPlaceholder = document.getElementById('scanner-placeholder');
             scannerPlaceholder.style.display = 'none';
+            
             Quagga.init({
-                inputStream: { name: "Live", type: "LiveStream", target: '#barcode-scanner', constraints: { width: 480, height: 320, facingMode: "environment" }},
-                decoder: { readers: ["code_128_reader", "ean_reader"] }
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: '#barcode-scanner',
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    },
+                    area: { // Define uma área de escaneamento menor para melhorar a performance
+                        top: "30%",
+                        right: "10%",
+                        left: "10%",
+                        bottom: "30%"
+                    }
+                },
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                },
+                numOfWorkers: navigator.hardwareConcurrency || 2, // Usa 2 workers por padrão
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "upc_reader"
+                    ]
+                },
+                locate: true
             }, err => {
                 if (err) {
-                    showNotification('error', 'Erro ao iniciar câmera.');
+                    showNotification('error', 'Erro ao iniciar câmera: ' + err);
                     scannerPlaceholder.style.display = 'flex';
                     return;
                 }
@@ -1982,6 +2011,7 @@ function displayAnalysisResults(products) {
                 document.getElementById('stop-scanner').classList.remove('inactive');
                 Quagga.start();
             });
+
             Quagga.onDetected(result => {
                 if (!canScan) return;
                 const code = result.codeResult.code;
